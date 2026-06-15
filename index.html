@@ -3,8 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="icon" type="image/png" href="images/icon.png">
+<link rel="apple-touch-icon" href="images/icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="中国語ノート">
 <title>中国語ノート</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -14,6 +21,15 @@ button { color: inherit; }
 button { color: inherit; }
 body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   font-family: 'Inter','Noto Sans SC','Hiragino Sans',sans-serif; }
+/* 英数字はInterで表示（unicode-rangeで指定） */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  src: url('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+.num, .en { font-family: 'Inter', sans-serif; }
 .material-icons { font-size: 22px; vertical-align: middle; line-height: 1; user-select: none; }
 
 /* ヘッダー */
@@ -216,7 +232,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 
 .fab {
-  position: fixed; bottom: 68px; right: 24px; width: 52px; height: 52px;
+  position: fixed; bottom: 84px; right: 24px; width: 52px; height: 52px;
   border-radius: 50%; color: #fff; font-size: 28px; border: none; cursor: pointer;
   box-shadow: 0 4px 16px rgba(0,0,0,0.28); display: flex; align-items: center; justify-content: center;
 }
@@ -224,7 +240,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 
 /* スクロールボタン */
 .scroll-btns {
-  position: fixed; bottom: 72px; left: 16px; z-index: 30;
+  position: fixed; bottom: 88px; left: 16px; z-index: 30;
   display: flex; flex-direction: column; gap: 16px;
 }
 @media (min-width: 1024px) {
@@ -298,7 +314,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 #bottom-tabs {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
   display: flex; border-top-width: 1px; border-top-style: solid;
-  height: 56px;
+  height: 72px;
 }
 .tab-btn {
   flex: 1; border: none; cursor: pointer; font-family: inherit;
@@ -604,7 +620,7 @@ function renderList(app) {
       rightBtns
     )}
     ${settingsPanel()}
-    <div id="list-scroll" style="padding-bottom:80px;" onclick="closeSwipeOnBg(event)">
+    <div id="list-scroll" style="padding-bottom:96px;" onclick="closeSwipeOnBg(event)">
       ${itemsHTML}
     </div>
     ${bottomTabsHTML(c)}
@@ -873,7 +889,7 @@ function renderView(app) {
     )}
     <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
     ${settingsPanel()}
-    <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 80px;">
+    <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 30px;">
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
