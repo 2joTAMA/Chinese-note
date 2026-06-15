@@ -261,6 +261,10 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none;
 }
+img {
+  -webkit-touch-callout: none;
+  pointer-events: none;
+}
 /* マーカーFAB */
 #marker-fab {
   position: fixed; bottom: 76px; right: 20px; z-index: 40;
@@ -1516,18 +1520,19 @@ function renderDriveStatus(){ if(state.page==="list")render(); }
 
 function driveButtonsHTML(c) {
   const dot = state.unsaved ? `<span class="unsaved-dot"></span>` : "";
+  const ac = c.accent || col().accent;
   if(!_accessToken){
-    return `<button onclick="driveSignIn()" class="hbtn" style="color:${c.accent};">
+    return `<button onclick="driveSignIn()" class="hbtn" style="color:${ac};">
       <span class="material-icons">cloud</span>
       <span class="hbtn-label">接続</span>
     </button>`;
   }
   return `
-    <button onclick="driveLoad()" class="hbtn" style="color:${c.accent};">
+    <button onclick="driveLoad()" class="hbtn" style="color:${ac};">
       <span class="material-icons">cloud_download</span>
       <span class="hbtn-label">読込</span>
     </button>
-    <button onclick="driveSave()" class="hbtn" style="color:${state.unsaved?'#e8820a':c.accent};">
+    <button onclick="driveSave()" class="hbtn" style="color:${state.unsaved?'#e8820a':ac};">
       <span class="material-icons">cloud_upload</span>
       <span class="hbtn-label">保存${dot}</span>
     </button>`;
@@ -1683,7 +1688,7 @@ function expandSegment(segIdx) {
       onclick="selectWord(${segIdx},${wi})"
       data-has-marker="${hasMarker}"
       style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;
-        padding:6px 10px 6px;cursor:pointer;border-radius:8px;margin:2px 3px;
+        padding:4px 8px;cursor:pointer;border-radius:8px;margin:6px 3px;
         background:${hasMarker ? markedBg : normalBg};">
       <span style="font-size:${s.ch}px;font-weight:700;color:${c.ch};">${esc(w.text)}</span>
       <span style="font-size:${s.py}px;color:${c.py};white-space:nowrap;">${w.pinyin}</span>
@@ -1991,7 +1996,7 @@ function getAllMarkers() {
 
 function renderVocab(app) {
   const c = col(); const s = sz();
-  const vc = { ...c, header: c.vocabHeader, accent: c.vocabAccent, ui: c.vocabUi };
+  const vcol = { ...c, header: c.vocabHeader, accent: c.vocabAccent, ui: c.vocabUi };
   const em = state.vocabEditMode;
   const markers = getAllMarkers();
   const today = new Date().toISOString().slice(0,10);
@@ -2015,7 +2020,7 @@ function renderVocab(app) {
     groups[date].forEach(m => {
       const source = [m.folderTitle, m.noteTitle].filter(Boolean).join(" › ");
       gridHTML += `
-        <div class="vocab-card" style="background:${c.header};">
+        <div class="vocab-card" style="background:${vcol.header};">
           ${em ? `<input type="checkbox" class="vocab-checkbox" id="chk-${m.id}"
             onchange="toggleVocabCheck(${m.id},this.checked)">` : ""}
           <div class="vocab-card-inner">
@@ -2024,9 +2029,10 @@ function renderVocab(app) {
             <div class="vocab-source" style="color:${c.ui};">${esc(source)}</div>
           </div>
           ${!em ? `<button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId})"
-            style="color:${vc.accent};align-self:stretch;padding:0 14px;
+            style="color:${vcol.accent};align-self:stretch;padding:0 14px;
               border-left:1px solid ${c.bd};border-radius:0 12px 12px 0;
-              margin:-14px -16px -14px 0;" title="本文へジャンプ">
+              margin:-14px -16px -14px 0;
+              background:${c.id==='night'?'rgba(106,127,212,0.12)':'rgba(122,58,58,0.08)'};" title="本文へジャンプ">
             <span class="material-icons" style="font-size:20px;">open_in_new</span>
           </button>` : ""}
         </div>`;
@@ -2041,27 +2047,27 @@ function renderVocab(app) {
   const rightBtns = em
     ? `<button onclick="deleteCheckedVocab()" style="background:#e05555;border:none;border-radius:8px;
         padding:6px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">削除</button>
-       <button onclick="cancelVocabEdit()" style="background:none;border:1px solid ${vc.bd};border-radius:8px;
-        padding:6px 12px;font-size:13px;color:${vc.ui};cursor:pointer;font-family:inherit;">完了</button>`
+       <button onclick="cancelVocabEdit()" style="background:none;border:1px solid ${vcol.bd};border-radius:8px;
+        padding:6px 12px;font-size:13px;color:${vcol.ui};cursor:pointer;font-family:inherit;">完了</button>`
     : hbtn("edit","編集","startVocabEdit()",vc.ui) + hbtn("settings","設定","toggleSettings()",vc.ui);
 
   // ヘッダー・フッターにvocabカラーを適用
   document.body.style.background = c.bg;
   app.innerHTML = `
-    <div class="header" style="background:${vc.header};border-color:${c.bd};">
+    <div class="header" style="background:${vcol.header};border-color:${c.bd};">
       <div style="flex-shrink:0;"></div>
       <div class="header-title-area">
-        <div class="header-main-title" style="color:${vc.accent};">単語帳</div>
+        <div class="header-main-title" style="color:${vcol.accent};">単語帳</div>
       </div>
-      <div class="header-btns">${rightBtns}</div>
+      <div class="header-btns">${driveButtonsHTML(vcol)}${rightBtns}</div>
     </div>
-    ${!em ? `<div style="padding:8px 16px;font-size:12px;opacity:0.45;border-bottom:1px solid ${c.bd};background:${vc.header};">
+    ${!em ? `<div style="padding:8px 16px;font-size:12px;opacity:0.45;border-bottom:1px solid ${c.bd};background:${vcol.header};">
       <span class="material-icons" style="font-size:14px;vertical-align:middle;">open_in_new</span>
       右端タップで本文へジャンプ
     </div>` : ""}
     ${settingsPanel()}
     <div class="vocab-grid">${gridHTML}</div>
-    ${bottomTabsHTML(c, vc)}`;
+    ${bottomTabsHTML(c, vcol)}`;
 }
 
 let _vocabChecked = new Set();
