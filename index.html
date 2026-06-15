@@ -11,31 +11,32 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   font-family: 'Noto Sans SC', 'Hiragino Sans', sans-serif; }
-
-/* Material Icons サイズ調整 */
-.material-icons { font-size: 22px; vertical-align: middle; line-height: 1; }
+.material-icons { font-size: 22px; vertical-align: middle; line-height: 1; user-select: none; }
 
 /* ヘッダー */
 .header {
   position: sticky; top: 0; z-index: 10;
-  padding: 0 12px; height: 52px; border-bottom-width: 1px; border-bottom-style: solid;
+  padding: 0 10px; height: 52px; border-bottom-width: 1px; border-bottom-style: solid;
   display: flex; align-items: center; gap: 4px;
 }
-.header-title { font-size: 16px; font-weight: 700; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.header-btns  { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
-
-/* ヘッダーボタン：アイコンのみ（スマホ） */
+.header-title-area { flex: 1; overflow: hidden; min-width: 0; }
+.header-main-title { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-breadcrumb { font-size: 11px; opacity: 0.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-btns { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
 .hbtn {
   background: none; border: none; cursor: pointer;
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: 4px;
   padding: 6px 8px; border-radius: 8px; font-family: inherit;
   font-size: 13px; font-weight: 600; white-space: nowrap;
 }
-/* タブレット以上でラベルを表示 */
 .hbtn-label { display: none; }
-@media (min-width: 768px) {
-  .hbtn-label { display: inline; }
-  .hbtn { padding: 6px 10px; }
+@media (min-width: 768px) { .hbtn-label { display: inline; } .hbtn { padding: 6px 10px; } }
+
+/* 「保存せず終了」ボタン */
+.cancel-btn {
+  background: none; cursor: pointer; font-size: 12px; font-weight: 600;
+  padding: 5px 9px; border-radius: 7px; border-width: 1px; border-style: solid;
+  font-family: inherit; white-space: nowrap; flex-shrink: 0;
 }
 
 /* 設定パネル */
@@ -44,13 +45,12 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   border-radius: 14px; padding: 16px; min-width: 220px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.22);
 }
-.sp-label { font-size: 11px; opacity: 0.55; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+.sp-label { font-size: 11px; opacity: 0.55; margin-bottom: 8px; letter-spacing: 0.05em; }
 .sp-row   { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
 .sp-row:last-child { margin-bottom: 0; }
 .sp-chip {
   border-radius: 20px; padding: 5px 14px; font-size: 13px; cursor: pointer;
   border-width: 1.5px; border-style: solid; font-family: inherit; font-weight: 500;
-  transition: background 0.15s, color 0.15s;
 }
 .sp-toggle { display: flex; align-items: center; justify-content: space-between; }
 .toggle-track {
@@ -64,47 +64,89 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 
 /* 一覧 */
-.list-item {
-  display: flex; align-items: center;
-  padding: 0; border-bottom-width: 1px; border-bottom-style: solid;
+.list-section { margin-bottom: 0; }
+
+/* フォルダ行 */
+.folder-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; cursor: pointer;
+  border-bottom-width: 1px; border-bottom-style: solid;
   position: relative; overflow: hidden; user-select: none;
 }
-.list-item-inner {
-  flex: 1; display: flex; align-items: center; gap: 10px;
-  padding: 13px 16px; cursor: pointer; transition: transform 0.2s ease;
+.folder-row-inner {
+  display: flex; align-items: center; gap: 10px; flex: 1;
+  transition: transform 0.2s ease;
 }
-.item-icon  { font-size: 20px; flex-shrink: 0; width: 24px; text-align: center; }
-.item-title { font-size: 15px; font-weight: 500; flex: 1; }
-.item-chevron { opacity: 0.6; display: flex; align-items: center; }
+
+/* フォルダ子要素コンテナ */
+.folder-children {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.folder-children.open { max-height: 3000px; }
+
+/* フォルダ内ノート */
+.child-note-row {
+  display: flex; align-items: center;
+  position: relative; overflow: hidden; user-select: none;
+  border-bottom-width: 1px; border-bottom-style: solid;
+}
+.child-note-inner {
+  flex: 1; display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px 11px 36px; cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+/* トップレベルノート */
+.top-note-row {
+  display: flex; align-items: center;
+  position: relative; overflow: hidden; user-select: none;
+  border-bottom-width: 1px; border-bottom-style: solid;
+}
+.top-note-inner {
+  flex: 1; display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.item-title   { font-size: 15px; font-weight: 500; flex: 1; }
+.item-chevron { display: flex; align-items: center; opacity: 0.6; }
 .item-edit-title {
   font-size: 15px; font-weight: 500; flex: 1;
   background: none; border: none; outline: none; font-family: inherit;
   border-bottom-width: 1px; border-bottom-style: solid; padding-bottom: 2px;
 }
+
+/* スワイプ */
 .swipe-actions {
   display: flex; position: absolute; right: 0; top: 0; bottom: 0;
-  transform: translateX(100%); transition: transform 0.2s ease;
+  transform: translateX(100%);
 }
 .swipe-btn {
   border: none; cursor: pointer; font-size: 13px; font-weight: 600;
   padding: 0 20px; color: #fff; white-space: nowrap; font-family: inherit;
 }
 
-/* フォルダ子要素 */
-.folder-children {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.folder-children.open { max-height: 2000px; }
-
 /* ドラッグ */
 .dragging { opacity: 0.35; }
 .drag-over-folder { outline: 2px dashed currentColor; outline-offset: -3px; border-radius: 4px; }
 
 /* ビューア */
-.line-chinese { font-weight: 700; letter-spacing: 0.04em; }
+.line-chinese { font-weight: 700; letter-spacing: 0.04em; cursor: pointer; position: relative; }
 .line-pinyin  { letter-spacing: 0.06em; }
+.line-chinese:hover { opacity: 0.85; }
+
+/* しおり線 */
+.bookmark-line {
+  width: 100%; height: 2px; background: #e8820a;
+  margin: 6px 0 10px; border-radius: 2px; position: relative;
+}
+.bookmark-line::before {
+  content: '🔖';
+  position: absolute; right: 0; top: -10px;
+  font-size: 14px; line-height: 1;
+}
 
 /* モーダル */
 .modal-overlay {
@@ -133,34 +175,30 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   position: fixed; bottom: 28px; right: 24px; width: 52px; height: 52px;
   border-radius: 50%; color: #fff; font-size: 28px; border: none; cursor: pointer;
   box-shadow: 0 4px 16px rgba(0,0,0,0.28); display: flex; align-items: center; justify-content: center;
-  transition: transform 0.15s;
 }
 .fab:active { transform: scale(0.93); }
 
 /* 編集テキストエリア */
 #edit-textarea {
   width: 100%; border-radius: 10px; padding: 14px; resize: none; outline: none;
-  line-height: 1.9; font-family: inherit; border-width: 1px; border-style: solid;
-  min-height: 60vh;
+  line-height: 1.9; font-family: inherit; border-width: 1px; border-style: solid; min-height: 60vh;
 }
 </style>
 </head>
 <body>
 <div id="app"></div>
-
 <script>
 // ============================================================
 // テーマ
 // ============================================================
 const COLORS = [
   {
-    id: "night-cream",
+    id: "night",
     label: "夜",
     bg: "#1c1c24", header: "#14141a",
-    ch: "#f5f0e6",   // 白に近いベージュ（オレンジ味を抑える）
-    py: "#88c0a0",
+    ch: "#f5f0e6", py: "#88c0a0",
     ui: "#a8a8b8", bd: "#2e2e3a", input: "#252530", accent: "#88c0a0",
-    childBg: "#18181f",
+    childBg: "#18181f", childBd: "#26263a",
   },
   {
     id: "paper",
@@ -168,14 +206,14 @@ const COLORS = [
     bg: "#f5f0e8", header: "#ede5d8",
     ch: "#3a2d1e", py: "#7a6a4a",
     ui: "#5a4a3a", bd: "#ddd0bc", input: "#fdfaf5", accent: "#7a6a4a",
-    childBg: "#ede5d8",
+    childBg: "#ede5d8", childBd: "#d0c4ae",
   },
 ];
 
 const SIZES = [
-  { label: "小", ch: 17, py: 12, lhCh: 1.6, lhPy: 1.4, mbPy: 10, mbNoPy: 14 },
-  { label: "中", ch: 22, py: 14, lhCh: 1.6, lhPy: 1.4, mbPy: 14, mbNoPy: 18 },
-  { label: "大", ch: 28, py: 17, lhCh: 1.6, lhPy: 1.4, mbPy: 18, mbNoPy: 24 },
+  { label: "小", ch: 17, py: 12, lhCh: 1.65, lhPy: 1.4, mbPy: 10, mbNoPy: 16 },
+  { label: "中", ch: 22, py: 14, lhCh: 1.65, lhPy: 1.4, mbPy: 14, mbNoPy: 20 },
+  { label: "大", ch: 28, py: 17, lhCh: 1.65, lhPy: 1.4, mbPy: 18, mbNoPy: 26 },
 ];
 
 // ============================================================
@@ -183,6 +221,8 @@ const SIZES = [
 // ============================================================
 const DELIMITERS_SPLIT = /([。！？!?]+)/;
 const DELIMITERS_TEST  = /^[。！？!?]+$/;
+// 閉じ括弧・閉じクォート
+const CLOSE_CHARS = /^["""」』】〕)）]/;
 
 function buildSegments(raw, oldSegments) {
   const oldMap = {};
@@ -199,12 +239,15 @@ function buildSegments(raw, oldSegments) {
       if (!part) continue;
       if (DELIMITERS_TEST.test(part)) {
         buf += part;
+        // 直後が閉じ括弧・クォートなら吸収して区切らない
         const next = parts[i + 1] || "";
-        if (/^["""」』】〕)）]/.test(next)) { buf += next; i++; }
+        if (CLOSE_CHARS.test(next)) { buf += next; i++; }
         const text = buf.trim();
         if (text) segments.push({ chinese: text, pinyin: oldMap[text] || getPy(text) });
         buf = "";
-      } else { buf += part; }
+      } else {
+        buf += part;
+      }
     }
     const text = buf.trim();
     if (text) segments.push({ chinese: text, pinyin: oldMap[text] || getPy(text) });
@@ -233,9 +276,9 @@ const NOVEL_RAW =
 let state = {
   page: "list",
   items: [
-    { kind: "note",   id: 1, title: "はじめての中国語", raw: "你好，我叫小明。今天天气很好。\n我喜欢学习中文。", segments: [], folderId: null },
+    { kind: "note",   id: 1, title: "はじめての中国語", raw: "你好，我叫小明。今天天气很好。\n我喜欢学习中文。", segments: [], folderId: null, bookmarkIdx: null, scrollY: 0 },
     { kind: "folder", id: 2, title: "小説", open: true },
-    { kind: "note",   id: 3, title: "第1章", raw: NOVEL_RAW, segments: [], folderId: 2 },
+    { kind: "note",   id: 3, title: "第1章", raw: NOVEL_RAW, segments: [], folderId: 2, bookmarkIdx: null, scrollY: 0 },
   ],
   currentNoteId: null,
   colorIdx: 0, sizeIdx: 1,
@@ -249,9 +292,10 @@ let state = {
 const col  = () => COLORS[state.colorIdx];
 const sz   = () => SIZES[state.sizeIdx];
 const note = () => state.items.find(i => i.id === state.currentNoteId);
+const folderOf = (n) => n && n.folderId ? state.items.find(i => i.id === n.folderId) : null;
 
 // ============================================================
-// RENDER
+// RENDER ROOT
 // ============================================================
 function render() {
   const c = col();
@@ -264,11 +308,11 @@ function render() {
 }
 
 // ---- ヘッダー ----
-function mkHeader(leftHTML, titleHTML, rightHTML) {
+function mkHeader(leftHTML, titleAreaHTML, rightHTML) {
   const c = col();
   return `<div class="header" style="background:${c.header};border-color:${c.bd};">
-    <div style="flex-shrink:0;min-width:44px;">${leftHTML}</div>
-    <div class="header-title" style="color:${c.ch};">${titleHTML}</div>
+    <div style="flex-shrink:0;">${leftHTML}</div>
+    <div class="header-title-area">${titleAreaHTML}</div>
     <div class="header-btns">${rightHTML}</div>
   </div>`;
 }
@@ -314,10 +358,9 @@ function settingsPanel() {
 // ============================================================
 function renderList(app) {
   const c = col(); const em = state.listEditMode;
-
   const topItems = state.items.filter(i => i.kind === "folder" || (i.kind === "note" && !i.folderId));
   let itemsHTML = topItems.map(item =>
-    item.kind === "folder" ? folderItemHTML(item, c, em) : noteItemHTML(item, c, em, null)
+    item.kind === "folder" ? folderRowHTML(item, c, em) : topNoteRowHTML(item, c, em)
   ).join("");
 
   const rightBtns =
@@ -325,11 +368,13 @@ function renderList(app) {
     hbtn("settings", "設定", "toggleSettings()", c.ui);
 
   app.innerHTML = `
-    ${mkHeader("", "📖 中国語ノート", rightBtns)}
+    ${mkHeader("",
+      `<div class="header-main-title" style="color:${c.ch};">📖 中国語ノート</div>`,
+      rightBtns
+    )}
     ${settingsPanel()}
-    <div style="padding-bottom:100px;" id="list-scroll" onclick="closeSwipeOnBackground(event)">
+    <div id="list-scroll" style="padding-bottom:100px;" onclick="closeSwipeOnBg(event)">
       ${itemsHTML}
-      ${state.items.length === 0 ? `<div style="text-align:center;padding:60px 20px;opacity:0.4;font-size:14px;">＋ボタンで作成</div>` : ""}
     </div>
     <button class="fab" onclick="openNewModal()" style="background:${c.accent};">
       <span class="material-icons" style="font-size:26px;">add</span>
@@ -366,12 +411,12 @@ function renderList(app) {
       <div class="modal-box" style="background:${c.header};" onclick="event.stopPropagation()">
         <div class="modal-title" style="color:${c.accent};">移動先フォルダを選択</div>
         <button class="mbtn" onclick="moveNoteTo(null)"
-          style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};text-align:left;">
-          <span class="material-icons">inbox</span>トップレベル（フォルダなし）
+          style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};">
+          <span class="material-icons">inbox</span>トップレベル
         </button>
         ${state.items.filter(i => i.kind === "folder").map(f =>
           `<button class="mbtn" onclick="moveNoteTo(${f.id})"
-            style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};text-align:left;">
+            style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};">
             <span class="material-icons">folder</span>${esc(f.title)}
           </button>`
         ).join("")}
@@ -380,83 +425,117 @@ function renderList(app) {
     </div>`;
 
   initSwipeListeners();
-  initDragListeners();
 }
 
-function folderItemHTML(folder, c, em) {
+function folderRowHTML(folder, c, em) {
   const children = state.items.filter(i => i.kind === "note" && i.folderId === folder.id);
-  const childrenHTML = children.map(n => noteItemHTML(n, c, em, folder.id)).join("");
   const isOpen = folder.open;
+  const childrenHTML = children.map(n => childNoteRowHTML(n, c, em)).join("");
 
-  let inner = "";
+  let rowContent = "";
   if (em) {
-    inner = `<div class="list-item-inner" style="cursor:default;">
-      <span class="item-icon"><span class="material-icons" style="color:${c.accent};">folder</span></span>
+    rowContent = `
+      <span class="material-icons" style="color:${c.accent};font-size:22px;flex-shrink:0;">folder</span>
       <input class="item-edit-title" value="${esc(folder.title)}"
         style="color:${c.ch};border-color:${c.bd};"
         onchange="renameItem(${folder.id}, this.value)">
-      <button onclick="deleteItem(${folder.id})" style="background:none;border:none;color:#e05555;cursor:pointer;">
+      <button onclick="deleteItem(${folder.id})" style="background:none;border:none;color:#e05555;cursor:pointer;flex-shrink:0;">
         <span class="material-icons">remove_circle_outline</span>
-      </button>
-    </div>`;
+      </button>`;
   } else {
-    inner = `<div class="list-item-inner" id="inner-${folder.id}" onclick="toggleFolder(${folder.id})">
-      <span class="item-icon"><span class="material-icons" style="color:${c.accent};font-size:22px;">${isOpen ? "folder_open" : "folder"}</span></span>
-      <span class="item-title" style="color:${c.ch};">${esc(folder.title)}</span>
-      <span class="item-chevron">
-        <span class="material-icons" style="font-size:26px;transition:transform 0.3s;transform:rotate(${isOpen ? 90 : 0}deg);">chevron_right</span>
-      </span>
-    </div>
-    <div class="swipe-actions" id="swipe-actions-${folder.id}">
-      <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${folder.id})">削除</button>
-    </div>`;
+    rowContent = `
+      <div class="folder-row-inner" id="inner-${folder.id}">
+        <span class="material-icons" style="color:${c.accent};font-size:22px;flex-shrink:0;">${isOpen ? "folder_open" : "folder"}</span>
+        <span class="item-title" style="color:${c.ch};">${esc(folder.title)}</span>
+        <span class="item-chevron">
+          <span class="material-icons" style="font-size:26px;transition:transform 0.4s;transform:rotate(${isOpen?90:0}deg);">
+            expand_more
+          </span>
+        </span>
+      </div>
+      <div class="swipe-actions" id="swipe-actions-${folder.id}">
+        <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${folder.id})">削除</button>
+      </div>`;
   }
 
   return `
-    <div class="list-item" id="item-${folder.id}" style="border-color:${c.bd};"
+    <div class="folder-row" id="item-${folder.id}"
+      style="border-color:${c.bd};background:${c.header};"
       data-id="${folder.id}" data-kind="folder"
+      ${em ? "" : `onclick="toggleFolder(${folder.id})"`}
       ondragover="folderDragOver(event,${folder.id})"
       ondragleave="folderDragLeave(event,${folder.id})"
       ondrop="folderDrop(event,${folder.id})">
-      ${inner}
+      ${rowContent}
     </div>
-    <div class="folder-children ${isOpen ? "open" : ""}" id="children-${folder.id}" style="background:${c.childBg};">
+    <div class="folder-children ${isOpen?"open":""}" id="children-${folder.id}"
+      style="background:${c.childBg};border-bottom:${isOpen?`1px solid ${c.bd}`:'none'};">
       ${childrenHTML}
     </div>`;
 }
 
-function noteItemHTML(n, c, em, folderId) {
-  const indent = folderId ? "padding-left:40px;" : "";
+function childNoteRowHTML(n, c, em) {
   let inner = "";
   if (em) {
-    inner = `<div class="list-item-inner" style="cursor:default;${indent}">
+    inner = `<div style="display:flex;align-items:center;gap:10px;padding:11px 16px 11px 36px;flex:1;">
       <input class="item-edit-title" value="${esc(n.title)}"
-        style="color:${c.ch};border-color:${c.bd};"
+        style="color:${c.ch};border-color:${c.childBd};"
         onchange="renameItem(${n.id}, this.value)">
-      <button onclick="deleteItem(${n.id})" style="background:none;border:none;color:#e05555;cursor:pointer;">
+      <button onclick="deleteItem(${n.id})" style="background:none;border:none;color:#e05555;cursor:pointer;flex-shrink:0;">
         <span class="material-icons">remove_circle_outline</span>
       </button>
     </div>`;
   } else {
-    inner = `<div class="list-item-inner" id="inner-${n.id}"
+    inner = `
+      <div class="child-note-inner" id="inner-${n.id}"
         onclick="openNote(${n.id})"
         draggable="true"
         ondragstart="dragStart(event,${n.id})"
-        ondragend="dragEnd(event)"
-        style="${indent}">
-      <span class="item-title" style="color:${c.ch};">${esc(n.title)}</span>
-      <span class="item-chevron">
-        <span class="material-icons" style="font-size:26px;">chevron_right</span>
-      </span>
-    </div>
-    <div class="swipe-actions" id="swipe-actions-${n.id}">
-      <button class="swipe-btn" style="background:#5b8fd4;" onclick="openMoveModal(${n.id})">移動</button>
-      <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${n.id})">削除</button>
-    </div>`;
+        ondragend="dragEnd(event)">
+        <span class="item-title" style="color:${c.ch};font-size:14px;">${esc(n.title)}</span>
+        <span class="item-chevron">
+          <span class="material-icons" style="font-size:22px;">chevron_right</span>
+        </span>
+      </div>
+      <div class="swipe-actions" id="swipe-actions-${n.id}">
+        <button class="swipe-btn" style="background:#5b8fd4;" onclick="openMoveModal(${n.id})">移動</button>
+        <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${n.id})">削除</button>
+      </div>`;
   }
-  return `<div class="list-item" id="item-${n.id}" style="border-color:${c.bd};" data-id="${n.id}" data-kind="note">
-    ${inner}
-  </div>`;
+  return `<div class="child-note-row" id="item-${n.id}" style="border-color:${c.childBd};"
+    data-id="${n.id}" data-kind="note">${inner}</div>`;
+}
+
+function topNoteRowHTML(n, c, em) {
+  let inner = "";
+  if (em) {
+    inner = `<div style="display:flex;align-items:center;gap:10px;padding:13px 16px;flex:1;">
+      <input class="item-edit-title" value="${esc(n.title)}"
+        style="color:${c.ch};border-color:${c.bd};"
+        onchange="renameItem(${n.id}, this.value)">
+      <button onclick="deleteItem(${n.id})" style="background:none;border:none;color:#e05555;cursor:pointer;flex-shrink:0;">
+        <span class="material-icons">remove_circle_outline</span>
+      </button>
+    </div>`;
+  } else {
+    inner = `
+      <div class="top-note-inner" id="inner-${n.id}"
+        onclick="openNote(${n.id})"
+        draggable="true"
+        ondragstart="dragStart(event,${n.id})"
+        ondragend="dragEnd(event)">
+        <span class="item-title" style="color:${c.ch};">${esc(n.title)}</span>
+        <span class="item-chevron">
+          <span class="material-icons" style="font-size:26px;">chevron_right</span>
+        </span>
+      </div>
+      <div class="swipe-actions" id="swipe-actions-${n.id}">
+        <button class="swipe-btn" style="background:#5b8fd4;" onclick="openMoveModal(${n.id})">移動</button>
+        <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${n.id})">削除</button>
+      </div>`;
+  }
+  return `<div class="top-note-row" id="item-${n.id}" style="border-color:${c.bd};"
+    data-id="${n.id}" data-kind="note">${inner}</div>`;
 }
 
 // ============================================================
@@ -465,17 +544,30 @@ function noteItemHTML(n, c, em, folderId) {
 function renderView(app) {
   const c = col(); const s = sz(); const n = note();
   if (!n) { state.page = "list"; render(); return; }
+  const folder = folderOf(n);
 
-  const linesHTML = n.segments.map(seg => {
+  const linesHTML = n.segments.map((seg, idx) => {
+    const isBookmark = n.bookmarkIdx === idx;
+    const bmLine = isBookmark ? `<div class="bookmark-line"></div>` : "";
     if (state.showPinyin) {
-      return `<div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};">${esc(seg.chinese)}</div>
-              <div class="line-pinyin"  style="font-size:${s.py}px;color:${c.py};line-height:${s.lhPy};margin-bottom:${s.mbPy}px;">${seg.pinyin}</div>`;
+      return `${bmLine}
+        <div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};"
+          onclick="setBookmark(${idx})">${esc(seg.chinese)}</div>
+        <div class="line-pinyin" style="font-size:${s.py}px;color:${c.py};line-height:${s.lhPy};margin-bottom:${s.mbPy}px;">${seg.pinyin}</div>`;
     } else {
-      return `<div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};margin-bottom:${s.mbNoPy}px;">${esc(seg.chinese)}</div>`;
+      return `${bmLine}
+        <div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};margin-bottom:${s.mbNoPy}px;"
+          onclick="setBookmark(${idx})">${esc(seg.chinese)}</div>`;
     }
   }).join("");
 
+  const titleArea = folder
+    ? `<div class="header-breadcrumb" style="color:${c.py};">${esc(folder.title)}</div>
+       <div class="header-main-title" style="color:${c.ch};">${esc(n.title)}</div>`
+    : `<div class="header-main-title" style="color:${c.ch};">${esc(n.title)}</div>`;
+
   const rightBtns =
+    hbtn("bookmark", "しおり", "toggleBookmarkMode()", c.ui) +
     hbtn("edit", "編集", "goEdit()", c.ui) +
     hbtn("settings", "設定", "toggleSettings()", c.ui);
 
@@ -485,14 +577,50 @@ function renderView(app) {
         <span class="material-icons">arrow_back_ios</span>
         <span class="hbtn-label">一覧</span>
       </button>`,
-      esc(n.title),
+      titleArea,
       rightBtns
     )}
     ${settingsPanel()}
-    <div style="padding:20px 20px 120px;">
+    <div id="view-scroll" style="padding:20px 20px 120px;">
       ${linesHTML}
       ${n.segments.length === 0 ? `<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>` : ""}
     </div>`;
+
+  // スクロール位置を復元
+  requestAnimationFrame(() => {
+    if (n.scrollY) window.scrollTo(0, n.scrollY);
+  });
+}
+
+// しおりモード：行をタップしてしおりを設定（現在は直接タップで設定）
+let _bookmarkMode = false;
+function toggleBookmarkMode() {
+  _bookmarkMode = !_bookmarkMode;
+  const c = col();
+  const btn = document.querySelector('.hbtn [data-bm]');
+  // トースト表示
+  showToast(_bookmarkMode ? "しおりを設定する行をタップしてください" : "しおりモード終了");
+}
+
+function setBookmark(idx) {
+  const n = note(); if (!n) return;
+  n.bookmarkIdx = (n.bookmarkIdx === idx) ? null : idx; // 同じ行タップで解除
+  render();
+  // スクロール位置を復元
+  if (n.scrollY) requestAnimationFrame(() => window.scrollTo(0, n.scrollY));
+  showToast(n.bookmarkIdx !== null ? "しおりを設定しました" : "しおりを解除しました");
+}
+
+function showToast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,0.75);color:#fff;padding:8px 18px;border-radius:20px;
+    font-size:13px;z-index:200;white-space:nowrap;pointer-events:none;transition:opacity 0.3s;`;
+  t.style.opacity = "1";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = "0"; }, 2000);
 }
 
 // ============================================================
@@ -504,13 +632,15 @@ function renderEdit(app) {
 
   app.innerHTML = `
     ${mkHeader(
-      `<button onclick="cancelEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;
-        color:${c.ui};font-family:inherit;padding:6px 4px;white-space:nowrap;">保存せず終了</button>`,
-      esc(n.title),
+      `<button class="cancel-btn" onclick="cancelEdit()"
+        style="color:${c.ui};border-color:${c.bd};background:${c.input};">保存せず終了</button>`,
+      `<div class="header-main-title" style="color:${c.ch};padding:0 4px;">${esc(n.title)}</div>`,
       `<button onclick="saveEdit()" style="background:${c.accent};border:none;border-radius:8px;
         padding:7px 16px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`
     )}
-    <div style="padding:10px 16px 4px;font-size:12px;opacity:0.4;">句点（。！？）または改行でピンインが区切られます</div>
+    <div style="padding:10px 16px 4px;font-size:12px;opacity:0.4;">
+      句点（。！？）または改行でピンインが区切られます
+    </div>
     <div style="padding:8px 16px 120px;">
       <textarea id="edit-textarea"
         style="background:${c.input};border-color:${c.bd};color:${c.ch};font-size:${s.ch}px;"
@@ -526,7 +656,7 @@ function renderEdit(app) {
 }
 
 // ============================================================
-// ACTIONS
+// ACTIONS — 設定
 // ============================================================
 function toggleSettings() { state.showSettings = !state.showSettings; render(); }
 function setSizeIdx(i)    { state.sizeIdx  = i; render(); }
@@ -537,29 +667,64 @@ function toggleListEdit() { state.listEditMode = !state.listEditMode; render(); 
 function toggleFolder(id) {
   const f = state.items.find(i => i.id === id); if (!f) return;
   f.open = !f.open;
-  // CSSクラスで制御（アニメーション付き）
+  // DOM直接更新（アニメーション即開始）
   const el = document.getElementById("children-" + id);
-  if (el) el.classList.toggle("open", f.open);
-  // フォルダアイコンと矢印を更新
+  const c = col();
+  if (el) {
+    el.classList.toggle("open", f.open);
+    el.style.borderBottom = f.open ? `1px solid ${c.bd}` : "none";
+  }
   const inner = document.getElementById("inner-" + id);
   if (inner) {
-    const icon = inner.querySelector(".material-icons:first-child");
-    if (icon) icon.textContent = f.open ? "folder_open" : "folder";
+    const iconEl = inner.querySelector(".material-icons:first-child");
+    if (iconEl) iconEl.textContent = f.open ? "folder_open" : "folder";
     const chevron = inner.querySelector(".item-chevron .material-icons");
-    if (chevron) chevron.style.transform = `rotate(${f.open ? 90 : 0}deg)`;
+    if (chevron) chevron.style.transform = `rotate(${f.open ? 180 : 0}deg)`;
   }
 }
 
-function openNote(id)  { state.currentNoteId = id; state.page = "view"; state.showSettings = false; render(); }
-function goList()      { state.page = "list"; state.showSettings = false; render(); }
-function goEdit()      { const n = note(); if (!n) return; state.editText = n.raw || ""; state.page = "edit"; render(); }
-function cancelEdit()  { state.page = "view"; render(); }
-function saveEdit()    {
+function openNote(id) {
+  // 現在のノートのスクロール位置を保存
+  const cur = note();
+  if (cur) cur.scrollY = window.scrollY;
+  state.currentNoteId = id;
+  state.page = "view";
+  state.showSettings = false;
+  window.scrollTo(0, 0);
+  render();
+}
+
+function goList() {
+  // スクロール位置保存
+  const n = note(); if (n) n.scrollY = window.scrollY;
+  state.page = "list";
+  state.showSettings = false;
+  window.scrollTo(0, 0);
+  render();
+}
+
+function goEdit() {
+  const n = note(); if (!n) return;
+  state.editText = n.raw || "";
+  state.page = "edit";
+  window.scrollTo(0, 0);
+  render();
+}
+
+function cancelEdit() {
+  state.page = "view"; render();
+  const n = note(); if (n && n.scrollY) requestAnimationFrame(() => window.scrollTo(0, n.scrollY));
+}
+
+function saveEdit() {
   const ta = document.getElementById("edit-textarea"); if (!ta) return;
   const n = note(); if (!n) return;
   n.raw = ta.value;
   n.segments = buildSegments(ta.value, n.segments);
-  state.page = "view"; render();
+  n.bookmarkIdx = null; // 内容変更でしおりリセット
+  state.page = "view";
+  window.scrollTo(0, 0);
+  render();
 }
 
 function renameItem(id, val) {
@@ -606,7 +771,7 @@ function confirmTitle() {
     state.items.push({ kind: "folder", id, title, open: true });
     closeTitleModal(); render();
   } else {
-    state.items.push({ kind: "note", id, title, raw: "", segments: [], folderId: null });
+    state.items.push({ kind: "note", id, title, raw: "", segments: [], folderId: null, bookmarkIdx: null, scrollY: 0 });
     closeTitleModal();
     state.currentNoteId = id; state.editText = ""; state.page = "edit"; render();
   }
@@ -624,7 +789,8 @@ function moveNoteTo(folderId) {
 // SWIPE
 // ============================================================
 function initSwipeListeners() {
-  document.querySelectorAll(".list-item-inner[id^='inner-']").forEach(el => {
+  const targets = [...document.querySelectorAll(".child-note-inner"), ...document.querySelectorAll(".top-note-inner"), ...document.querySelectorAll(".folder-row-inner")];
+  targets.forEach(el => {
     let startX = 0, startY = 0, tracking = false;
     el.addEventListener("touchstart", e => {
       startX = e.touches[0].clientX; startY = e.touches[0].clientY; tracking = false;
@@ -666,24 +832,23 @@ function closeSwipe() {
   if (actions) { const w = actions.scrollWidth; actions.style.transform = `translateX(${w}px)`; }
   state.swipeOpen = null;
 }
-
-function closeSwipeOnBackground(e) {
+function closeSwipeOnBg(e) {
   if (state.swipeOpen != null && !e.target.closest(".swipe-actions")) closeSwipe();
 }
 
 // ============================================================
 // DRAG & DROP
 // ============================================================
-function initDragListeners() {}  // イベントはHTMLに直書き
-
 function dragStart(e, id) {
   state.dragId = id;
   e.dataTransfer.setData("text/plain", String(id));
   e.dataTransfer.effectAllowed = "move";
-  setTimeout(() => e.target.closest(".list-item")?.classList.add("dragging"), 0);
+  setTimeout(() => e.target.closest(".top-note-row,.child-note-row")?.classList.add("dragging"), 0);
 }
-function dragEnd(e) { e.target.closest(".list-item")?.classList.remove("dragging"); state.dragId = null; }
-
+function dragEnd(e) {
+  e.target.closest(".top-note-row,.child-note-row")?.classList.remove("dragging");
+  state.dragId = null;
+}
 function folderDragOver(e, folderId) {
   if (state.dragId == null) return;
   e.preventDefault(); e.dataTransfer.dropEffect = "move";
@@ -715,6 +880,8 @@ function boot() {
   state.items.forEach(item => {
     if (item.kind === "note" && (!item.segments || item.segments.length === 0))
       item.segments = buildSegments(item.raw || "", []);
+    if (item.kind === "note" && item.scrollY === undefined) item.scrollY = 0;
+    if (item.kind === "note" && item.bookmarkIdx === undefined) item.bookmarkIdx = null;
   });
   render();
 }
