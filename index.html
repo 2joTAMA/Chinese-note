@@ -102,7 +102,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   position: relative; overflow: hidden; user-select: none; gap: 10px;
 }
 .folder-row-inner { display: flex; align-items: center; gap: 10px; flex: 1; transition: transform 0.2s; }
-.folder-title { font-size: 15px; font-weight: 700; flex: 1; }
+.folder-title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .folder-children {
   overflow: hidden; max-height: 0;
   transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1);
@@ -708,16 +708,16 @@ function folderRowHTML(folder, c, em) {
       <div class="folder-row-inner" id="inner-${folder.id}">
         <span class="material-icons" style="color:${c.accent};font-size:22px;flex-shrink:0;">
           ${isOpen?"folder_open":"folder"}</span>
-        <span class="folder-title" style="color:${c.ch};">${esc(folder.title)}</span>
-        ${children.length > 0 ? `<span style="background:${c.accent};color:${c.bg};
-          font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;
-          flex-shrink:0;margin-left:6px;">${children.length}</span>` : ""}
-        <span style="flex:1;"></span>
-        ${!isOpen && children.some(n => n.bookmarkIdx !== null && n.bookmarkIdx !== undefined) ?
-          `<span class="material-icons bm-folder-icon" style="font-size:16px;color:#e8820a;flex-shrink:0;margin-right:4px;">bookmark</span>` : ""}
-        <span style="display:flex;align-items:center;opacity:0.7;">
+        <span class="folder-title" style="color:${c.ch};white-space:nowrap;overflow:hidden;
+          text-overflow:ellipsis;flex:1;min-width:0;">${esc(folder.title)}</span>
+        <span style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px;">
+          ${children.length > 0 ? `<span style="background:${c.accent};color:${c.bg};
+            font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">${children.length}</span>` : ""}
+          <span class="material-icons bm-folder-icon"
+            style="font-size:16px;color:#e8820a;${!isOpen && children.some(n => n.bookmarkIdx !== null && n.bookmarkIdx !== undefined) ? "" : "visibility:hidden;"}">
+            bookmark</span>
           <span class="material-icons folder-chevron" id="chevron-${folder.id}"
-            style="font-size:26px;transition:transform 0.4s;transform:rotate(${isOpen?180:0}deg);">
+            style="font-size:26px;opacity:0.7;transition:transform 0.4s;transform:rotate(${isOpen?180:0}deg);">
             expand_more</span>
         </span>
       </div>
@@ -1131,9 +1131,13 @@ function toggleFolder(id) {
     if(iconEl) iconEl.textContent=f.open?"folder_open":"folder";
     const chevron=document.getElementById("chevron-"+id);
     if(chevron) chevron.style.transform=`rotate(${f.open?180:0}deg)`;
-    // しおりマークの表示/非表示
-    const bmIcon=inner.querySelector(".bm-folder-icon");
-    if(bmIcon) bmIcon.style.display=f.open?"none":"";
+    // しおりマークの表示/非表示（visibility使用で空間を確保）
+    const bmIcon=document.getElementById("item-"+id)?.querySelector(".bm-folder-icon");
+    if(bmIcon){
+      const children=state.items.filter(i=>i.kind==="note"&&i.folderId===id);
+      const hasBm=children.some(n=>n.bookmarkIdx!==null&&n.bookmarkIdx!==undefined);
+      bmIcon.style.visibility=(f.open||!hasBm)?"hidden":"";
+    }
   }
   const el=document.getElementById("children-"+id);
   if(el){ el.classList.toggle("open",f.open); el.style.borderBottom=f.open?`1px solid ${c.bd}`:""; }
@@ -1233,7 +1237,7 @@ function closeNewFolderModal() { document.getElementById("newFolderModal")?.clas
 function confirmNewFolder() {
   const title=document.getElementById("newFolderTitle")?.value.trim()||"新しいフォルダ";
   const id=state.nextId++;
-  state.items.push({kind:"folder",id,title,open:true});
+  state.items.push({kind:"folder",id,title,open:false});
   markUnsaved(); closeNewFolderModal(); render();
 }
 
@@ -2071,7 +2075,7 @@ function renderVocab(app) {
             onchange="toggleVocabCheck(${m.id},this.checked)">` : ""}
           <div class="vocab-card-inner">
             <div class="vocab-chinese" style="font-size:${s.ch}px;color:${vcol.ch};">${esc(m.text)}</div>
-            ${state.showPinyin ? `<div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};">${m.pinyin||""}</div>` : ""}
+            ${state.showPinyin ? `<div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};margin-top:4px;">${m.pinyin||getPy(m.text)}</div>` : ""}
             <div class="vocab-source" style="color:${vcol.ui};">${esc(source)}</div>
           </div>
           ${!em ? `<button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId},${m.segIdx})"
