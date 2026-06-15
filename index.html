@@ -41,14 +41,21 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 
 /* 未保存バッジ */
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 .unsaved-dot { display:inline-block; width:7px; height:7px; border-radius:50%;
   background:#e8820a; margin-left:3px; animation:pulse 1.5s infinite; vertical-align:middle; }
 
 /* 設定パネル */
 #settings-panel {
-  position: fixed; top: 54px; right: 12px; z-index: 100;
-  border-radius: 14px; padding: 16px; min-width: 220px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+  position: fixed; top: 52px; left: 0; right: 0; z-index: 100;
+  border-radius: 0 0 16px 16px; padding: 16px 20px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  border-top: none !important;
+}
+#settings-overlay {
+  position: fixed; inset: 0; top: 52px; z-index: 99;
+  background: transparent;
 }
 .sp-label { font-size: 11px; opacity: 0.55; margin-bottom: 8px; letter-spacing: 0.05em; }
 .sp-row   { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -213,6 +220,38 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 .fab:active { transform: scale(0.93); }
 
+/* スクロールボタン */
+.scroll-btns {
+  position: fixed; bottom: 32px; left: 16px; z-index: 30;
+  display: flex; flex-direction: column; gap: 8px;
+}
+@media (min-width: 1024px) {
+  .scroll-btns { left: auto; right: 88px; }
+}
+.scroll-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2); opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.scroll-btn.visible { opacity: 1; pointer-events: auto; }
+
+/* スクロールボタン */
+.scroll-btns {
+  position: fixed; bottom: 32px; left: 16px; z-index: 30;
+  display: flex; flex-direction: column; gap: 8px;
+}
+@media (min-width: 1024px) {
+  .scroll-btns { left: auto; right: 88px; }
+}
+.scroll-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2); opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.scroll-btn.visible { opacity: 1; pointer-events: auto; }
+
 /* 編集テキストエリア */
 #edit-textarea {
   width: 100%; border-radius: 10px; padding: 14px; resize: none; outline: none;
@@ -373,7 +412,8 @@ function settingsPanel() {
              color:${active?'#fff':c.ui};">${label}</button>`;
   const trackBg  = state.showPinyin ? c.accent : c.bd;
   const thumbPos = state.showPinyin ? "21px" : "3px";
-  return `<div id="settings-panel" style="background:${c.header};border:1px solid ${c.bd};">
+  return `<div id="settings-overlay" onclick="toggleSettings()"></div>
+  <div id="settings-panel" style="background:${c.header};border:1px solid ${c.bd};border-top:none;">
     <div class="sp-label">文字サイズ</div>
     <div class="sp-row">${SIZES.map((s,i)=>chip(state.sizeIdx===i,s.label,`setSizeIdx(${i})`)).join("")}</div>
     <div class="sp-label">カラー</div>
@@ -408,6 +448,30 @@ function renderConnect(app) {
         box-shadow:0 4px 16px rgba(0,0,0,0.2);">
         <span class="material-icons">login</span>Googleアカウントで接続
       </button>
+    </div>`;
+}
+
+function renderLoading() {
+  const c = col();
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;padding:40px 20px;text-align:center;">
+      <span class="material-icons" style="font-size:64px;color:${c.accent};opacity:0.7;margin-bottom:20px;
+        animation:spin 1.5s linear infinite;">sync</span>
+      <div style="font-size:15px;opacity:0.6;color:${c.ch};">データを読み込んでいます...</div>
+    </div>`;
+}
+
+function renderLoading() {
+  const c = col();
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;padding:40px 20px;text-align:center;">
+      <span class="material-icons" style="font-size:64px;color:${c.accent};opacity:0.7;margin-bottom:20px;
+        animation:spin 1.5s linear infinite;">sync</span>
+      <div style="font-size:15px;opacity:0.6;color:${c.ch};">データを読み込んでいます...</div>
     </div>`;
 }
 
@@ -664,7 +728,7 @@ function renderView(app) {
         padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`;
   } else {
     rightBtns =
-      hbtn("bookmark","しおり","startBookmarkMode()",c.ui) +
+      hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
       hbtn("edit","編集","goEdit()",c.ui) +
       hbtn("settings","設定","toggleSettings()",c.ui);
   }
@@ -690,7 +754,20 @@ function renderView(app) {
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
     ${jumpBtn}
-    ${!bm ? siblingNavHTML(n, c, s) : ""}`;
+    ${!bm ? siblingNavHTML(n, c, s) : ""}
+    ${!bm ? `<div id="note-end-img" style="width:100%;min-height:80px;
+      background:url('images/end-of-note.png') center/contain no-repeat;
+      opacity:0.6;margin-top:0;"></div>` : ""}
+    ${!bm ? `<div class="scroll-btns" id="scroll-btns">
+      <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
+        style="background:${c.header};color:${c.ui};border:1px solid ${c.bd};">
+        <span class="material-icons" style="font-size:20px;">keyboard_arrow_up</span>
+      </button>
+      <button class="scroll-btn visible" id="scroll-bot-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})"
+        style="background:${c.header};color:${c.ui};border:1px solid ${c.bd};">
+        <span class="material-icons" style="font-size:20px;">keyboard_arrow_down</span>
+      </button>
+    </div>` : ""}`;
 
   if (bm) {
     const vc = document.getElementById("view-content");
@@ -705,6 +782,20 @@ function renderView(app) {
     if (!bm && hasBookmark) jumpToBookmark(false);
     else window.scrollTo(0,0);
   });
+
+  // スクロールボタンの表示制御
+  if (!bm) {
+    const updateScrollBtns = () => {
+      const topBtn = document.getElementById("scroll-top-btn");
+      const botBtn = document.getElementById("scroll-bot-btn");
+      const scrolled = window.scrollY > 150;
+      const atBottom = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100;
+      if (topBtn) topBtn.classList.toggle("visible", scrolled);
+      if (botBtn) botBtn.classList.toggle("visible", !atBottom);
+    };
+    window.addEventListener("scroll", updateScrollBtns, { passive: true });
+    updateScrollBtns();
+  }
 }
 
 function jumpToBookmark(smooth=true) {
@@ -730,21 +821,26 @@ function siblingNavHTML(n, c, s) {
   const folder = folderOf(n);
   const folderName = folder ? esc(folder.title) : "";
 
+  // アクセントカラー（夜=緑、昼=濃いベージュ）
+  const navBg   = c.id === "night" ? "rgba(136,192,160,0.18)" : "#d4c4a8";
+  const navBgHov = c.id === "night" ? "rgba(136,192,160,0.3)"  : "#c8b490";
+  const navText = c.id === "night" ? c.py : "#5a3e20";
+
   const btnBase = `width:calc(50% - 6px);border-radius:12px;padding:12px 14px;cursor:pointer;
     font-family:inherit;display:flex;flex-direction:column;gap:5px;border:none;
-    background:${c.header};`;
-  const labelStyle = `font-size:11px;opacity:0.6;font-weight:600;letter-spacing:0.03em;`;
+    background:${navBg};`;
+  const labelStyle = `font-size:11px;font-weight:600;letter-spacing:0.03em;color:${navText};opacity:0.8;`;
   const titleStyle = `font-size:13px;font-weight:700;color:${c.ch};
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
-  const folderStyle = `font-size:10px;opacity:0.4;`;
-  const emptyStyle = `width:calc(50% - 6px);font-size:11px;opacity:0.3;
+  const folderStyle = `font-size:10px;opacity:0.45;color:${c.ui};`;
+  const emptyStyle = `width:calc(50% - 6px);font-size:11px;opacity:0.3;color:${c.ui};
     display:flex;align-items:center;padding:0 4px;`;
 
   const prevHTML = prev
     ? `<button onclick="openNote(${prev.id})" style="${btnBase}text-align:left;">
         <span style="${labelStyle}">‹ 前のノート</span>
         <span style="${titleStyle}">${esc(prev.title)}</span>
-        <span style="${folderStyle}">📁 ${folderName}</span>
+        <span style="${folderStyle}">${folderName}</span>
        </button>`
     : `<span style="${emptyStyle}">最初のノートです</span>`;
 
@@ -752,21 +848,13 @@ function siblingNavHTML(n, c, s) {
     ? `<button onclick="openNote(${next.id})" style="${btnBase}text-align:right;align-items:flex-end;">
         <span style="${labelStyle}">次のノート ›</span>
         <span style="${titleStyle}">${esc(next.title)}</span>
-        <span style="${folderStyle}">📁 ${folderName}</span>
+        <span style="${folderStyle}">${folderName}</span>
        </button>`
     : `<span style="${emptyStyle}justify-content:flex-end;">最後のノートです</span>`;
 
-  // PC/タブ（768px以上）はボタン間中央にフォルダ名
-  const centerFolder = `<span class="nav-center-folder" style="font-size:12px;opacity:0.45;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;text-align:center;">
-    📁 ${folderName}</span>`;
-
-  return `<style>.nav-center-folder{display:none;}
-    @media(min-width:768px){.nav-center-folder{display:block;}}</style>
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
       padding:24px 20px 48px;border-top:1px solid ${c.bd};margin-top:16px;">
       ${prevHTML}
-      ${centerFolder}
       ${nextHTML}
     </div>`;
 }
@@ -1062,7 +1150,8 @@ function driveSignIn() {
     callback:async(resp)=>{
       if(resp.error){showToast("認証エラー: "+resp.error);return;}
       _accessToken=resp.access_token;
-      showToast("Googleアカウントに接続しました");
+      // 接続中画面を表示
+      renderLoading();
       await driveLoad();
       renderDriveStatus();
     },
