@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>中国語ノート</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -13,7 +13,7 @@
 button { color: inherit; }
 button { color: inherit; }
 body { min-height: 100vh; transition: background 0.3s, color 0.3s;
-  font-family: 'Noto Sans SC','Hiragino Sans',sans-serif; }
+  font-family: 'Inter','Noto Sans SC','Hiragino Sans',sans-serif; }
 .material-icons { font-size: 22px; vertical-align: middle; line-height: 1; user-select: none; }
 
 /* ヘッダー */
@@ -1279,29 +1279,31 @@ function dragStart(e, id) {
   const dragItem = state.items.find(i => i.id === id);
   state._dragKind = dragItem?.kind || "note";
   setTimeout(() => {
-    document.getElementById("item-" + id)?.classList.add("dragging");
+    const el = document.getElementById("item-" + id);
+    if (el) el.style.opacity = "0.4";
     // フォルダをドラッグ中はノートをグレーアウト
     if (state._dragKind === "folder") {
       document.querySelectorAll(".top-note-row, .child-note-row").forEach(el => {
-        el.style.opacity = "0.3"; el.style.pointerEvents = "none";
+        el.style.opacity = "0.25"; el.style.pointerEvents = "none";
       });
     }
   }, 0);
 }
 
 function dragEnd(e) {
-  document.getElementById("item-" + state.dragId)?.classList.remove("dragging");
+  const dragEl = document.getElementById("item-" + state.dragId);
+  if (dragEl) dragEl.style.opacity = "";
   // グレーアウト解除
   document.querySelectorAll(".top-note-row, .child-note-row").forEach(el => {
     el.style.opacity = ""; el.style.pointerEvents = "";
   });
   clearInsertionLine();
   state.dragId = null; state._dragKind = null;
-  _dragOverId = null;
+  _dragOverId = null; _dragInsertAfter = null;
 }
 
 function folderDragOver(e, id) {
-  if (!state.dragId) return;
+  if (!state.dragId || state.dragId === id) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = "move";
   if (state._dragKind === "folder") {
@@ -1491,7 +1493,7 @@ async function driveSave() {
       const data=await res.json(); _driveFileId=data.id;
     }
     state.unsaved=false;
-    showToast("Google Driveに保存しました ✓");
+    showToast("Google Driveに保存しました");
     render();
   } catch(e){ showToast("保存エラー: "+e.message); }
 }
@@ -1526,7 +1528,7 @@ async function driveLoad() {
     state.page="list";
     const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
     const kb = (bytes / 1024).toFixed(1);
-    showToast("読み込みました ✓  " + kb + " KB"); render();
+    showToast("読み込みました " + kb + " KB"); render();
   } catch(e){ showToast("読み込みエラー: "+e.message); }
 }
 function renderDriveStatus(){ if(state.page==="list")render(); }
@@ -2146,15 +2148,20 @@ function bottomTabsHTML(c, vc) {
   const tabBg   = isVocab ? vocabC.header : c.header;
   const noteCol  = isVocab ? (c.ui+"66") : c.accent;
   const vocabCol = isVocab ? vocabC.accent : ((c.vocabAccent||c.accent)+"66");
-  return `<div id="bottom-tabs" style="background:${tabBg};border-color:${c.bd};">
+  // 左(ノート)と右(単語帳)で常に色分け
+  const noteTabBg   = c.header;
+  const vocabTabBg  = vocabC.header;
+  const noteTabCol  = isVocab ? (c.accent+"88") : c.accent;
+  const vocabTabCol2 = isVocab ? vocabC.accent : (vocabC.accent+"88");
+  return `<div id="bottom-tabs" style="background:transparent;border-color:${c.bd};">
     <button class="tab-btn" onclick="goNoteTab()"
-      style="color:${noteCol};font-weight:${isVocab?"400":"700"};">
+      style="color:${noteTabCol};background:${noteTabBg};font-weight:${isVocab?"400":"700"};">
       <span class="material-icons">menu_book</span>
       <span>ノート</span>
     </button>
     <div class="tab-divider" style="background:${c.bd};"></div>
     <button class="tab-btn" onclick="goVocabTab()"
-      style="color:${vocabCol};font-weight:${isVocab?"700":"400"};">
+      style="color:${vocabTabCol2};background:${vocabTabBg};font-weight:${isVocab?"700":"400"};">
       <span class="material-icons">bookmarks</span>
       <span>単語帳</span>
     </button>
