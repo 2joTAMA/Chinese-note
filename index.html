@@ -10,6 +10,8 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+button { color: inherit; }
+button { color: inherit; }
 body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   font-family: 'Noto Sans SC','Hiragino Sans',sans-serif; }
 .material-icons { font-size: 22px; vertical-align: middle; line-height: 1; user-select: none; }
@@ -261,10 +263,6 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none;
 }
-img:not(.tab-btn img) {
-  -webkit-touch-callout: none;
-  pointer-events: none;
-}
 #bottom-tabs { pointer-events: auto; }
 #bottom-tabs * { pointer-events: auto; }
 /* マーカーFAB */
@@ -298,7 +296,7 @@ img:not(.tab-btn img) {
 
 /* ===== 下部タブ ===== */
 #bottom-tabs {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
   display: flex; border-top-width: 1px; border-top-style: solid;
   height: 56px;
 }
@@ -1527,7 +1525,7 @@ function renderDriveStatus(){ if(state.page==="list")render(); }
 
 function driveButtonsHTML(c) {
   const dot = state.unsaved ? `<span class="unsaved-dot"></span>` : "";
-  const ac = c.accent || col().accent;
+  const ac = (c && c.accent) ? c.accent : col().accent;
   if(!_accessToken){
     return `<button onclick="driveSignIn()" class="hbtn" style="color:${ac};">
       <span class="material-icons">cloud</span>
@@ -2003,7 +2001,7 @@ function getAllMarkers() {
 
 function renderVocab(app) {
   const c = col(); const s = sz();
-  const vcol = { ...c, header: c.vocabHeader, accent: c.vocabAccent, ui: c.vocabUi };
+  const vcol = { ...c, header: c.vocabHeader||c.header, accent: c.vocabAccent||c.accent, ui: c.vocabUi||c.ui };
   const em = state.vocabEditMode;
   const markers = getAllMarkers();
   const today = new Date().toISOString().slice(0,10);
@@ -2027,7 +2025,7 @@ function renderVocab(app) {
     groups[date].forEach(m => {
       const source = [m.folderTitle, m.noteTitle].filter(Boolean).join(" › ");
       gridHTML += `
-        <div class="vocab-card" style="background:${vcol.header};">
+        <div class="vocab-card" style="background:${vcol.input};">
           ${em ? `<input type="checkbox" class="vocab-checkbox" id="chk-${m.id}"
             onchange="toggleVocabCheck(${m.id},this.checked)">` : ""}
           <div class="vocab-card-inner">
