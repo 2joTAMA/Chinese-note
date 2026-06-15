@@ -150,14 +150,21 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 /* しおり編集 */
 #view-content { transition: opacity 0.25s; }
 #view-content.bm-mode { opacity: 0.3; }
+/* ギャップはheight:0でレイアウトに影響なし、absoluteで点線を表示 */
 .bm-gap {
   display: none; width: 100%; cursor: pointer;
-  padding: 8px 0; position: relative; pointer-events: auto;
+  height: 0; position: relative; pointer-events: auto; margin: 0;
 }
 .bm-gap.visible { display: block; }
 .bm-gap-line {
-  width: 100%; height: 0;
-  border-top: 2px dashed rgba(232,130,10,0.7);
+  position: absolute; left: 0; right: 0; top: 0;
+  height: 0; border-top: 2px dashed rgba(232,130,10,0.7);
+  pointer-events: none;
+}
+.bm-gap::after {
+  content: ""; display: block; position: absolute;
+  left: 0; right: 0; top: -10px; height: 20px;
+  cursor: pointer;
 }
 .bm-gap:hover .bm-gap-line,
 .bm-gap.selected .bm-gap-line { border-color: #e8820a; border-style: solid; border-width: 2.5px; }
@@ -240,7 +247,14 @@ const SIZES = [
   { label:"中", ch:22, py:14, lhCh:1.65, lhPy:1.4, mbPy:14, mbNoPy:20 },
   { label:"大", ch:28, py:17, lhCh:1.65, lhPy:1.4, mbPy:18, mbNoPy:26 },
 ];
-function defaultSizeIdx() { return window.innerWidth < 768 ? 0 : 1; }
+function getDeviceDefaults() {
+  const mobile = window.innerWidth < 768;
+  return {
+    sizeIdx:  mobile ? 0 : 1,   // スマホ:小, PC/タブ:中
+    colorIdx: mobile ? 0 : 1,   // スマホ:夜, PC/タブ:昼
+    showPinyin: true,
+  };
+}
 
 // ============================================================
 // 区切り処理
@@ -302,20 +316,16 @@ const NOVEL_RAW =
 萧景睿微微有些怔忡，问道："怎么苏兄以前……来过金陵？"`;
 
 let state = {
-  page: "list",
-  items: [
-    { kind:"note",   id:1, title:"はじめての中国語", raw:"你好，我叫小明。今天天气很好。\n我喜欢学习中文。", segments:[], folderId:null, bookmarkIdx:null },
-    { kind:"folder", id:2, title:"小説", open:true },
-    { kind:"note",   id:3, title:"第1章", raw:NOVEL_RAW, segments:[], folderId:2, bookmarkIdx:null },
-  ],
+  page: "connect",   // "connect" | "list" | "view" | "edit"
+  items: [],
   currentNoteId: null,
-  colorIdx: 0, sizeIdx: 1,
+  colorIdx: 1, sizeIdx: 1,   // boot()で上書き
   showPinyin: true, showSettings: false, listEditMode: false,
   bookmarkMode: false, bookmarkPreview: null,
   editText: "", editTitleText: "",
-  nextId: 20,
+  nextId: 1,
   swipeOpen: null, dragId: null,
-  unsaved: false,   // 未保存フラグ
+  unsaved: false,
 };
 
 const col      = () => COLORS[state.colorIdx];
@@ -333,7 +343,8 @@ function render() {
   document.body.style.background = c.bg;
   document.body.style.color      = c.ui;
   const app = document.getElementById("app");
-  if      (state.page==="list") renderList(app);
+  if      (state.page==="connect") renderConnect(app);
+  else if (state.page==="list") renderList(app);
   else if (state.page==="view") renderView(app);
   else if (state.page==="edit") renderEdit(app);
 }
@@ -375,6 +386,29 @@ function settingsPanel() {
       </div>
     </div>
   </div>`;
+}
+
+// ============================================================
+// CONNECT
+// ============================================================
+function renderConnect(app) {
+  const c = col();
+  app.innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;padding:40px 20px;text-align:center;">
+      <span class="material-icons" style="font-size:80px;color:${c.accent};opacity:0.85;margin-bottom:24px;">
+        cloud</span>
+      <div style="font-size:20px;font-weight:700;color:${c.ch};margin-bottom:10px;">中国語ノート</div>
+      <div style="font-size:14px;opacity:0.55;margin-bottom:36px;line-height:1.7;">
+        Googleアカウントに接続して<br>データを読み込んでください
+      </div>
+      <button onclick="driveSignIn()" style="background:${c.accent};color:${c.bg};
+        border:none;border-radius:14px;padding:14px 36px;font-size:16px;font-weight:700;
+        cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:10px;
+        box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+        <span class="material-icons">login</span>Googleアカウントで接続
+      </button>
+    </div>`;
 }
 
 // ============================================================
@@ -592,7 +626,7 @@ function renderView(app) {
     // しおり編集ギャップ（高さ固定でズレを防ぐ）
     if (bm) {
       const isSel = state.bookmarkPreview === idx;
-      linesHTML += `<div class="bm-gap visible ${isSel?"selected":""}" style="height:24px;"
+      linesHTML += `<div class="bm-gap visible ${isSel?"selected":""}"
         onclick="selectBookmarkGap(${idx})"><div class="bm-gap-line"></div></div>`;
     }
     if (state.showPinyin) {
@@ -605,7 +639,7 @@ function renderView(app) {
   // 末尾ギャップ・しおり線
   if (bm) {
     const isSel = state.bookmarkPreview === total;
-    linesHTML += `<div class="bm-gap visible ${isSel?"selected":""}" style="height:24px;"
+    linesHTML += `<div class="bm-gap visible ${isSel?"selected":""}"
       onclick="selectBookmarkGap(${total})"><div class="bm-gap-line"></div></div>`;
   }
   if (!bm && n.bookmarkIdx === total) {
@@ -623,11 +657,11 @@ function renderView(app) {
   let rightBtns = "";
   if (bm) {
     rightBtns = `
-      <button onclick="saveBookmark()" style="background:#e8820a;border:none;border-radius:8px;
-        padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>
-      <div style="width:12px;flex-shrink:0;"></div>
       <button onclick="deleteBookmark()" class="cancel-btn"
-        style="color:#e05555;border-color:#e05555;background:${c.input};font-size:11px;">しおりを削除して終了</button>`;
+        style="color:#e05555;border-color:#e05555;background:${c.input};font-size:11px;">しおりを削除して終了</button>
+      <div style="width:12px;flex-shrink:0;"></div>
+      <button onclick="saveBookmark()" style="background:#e8820a;border:none;border-radius:8px;
+        padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`;
   } else {
     rightBtns =
       hbtn("bookmark","しおり","startBookmarkMode()",c.ui) +
@@ -687,40 +721,54 @@ function jumpToBookmark(smooth=true) {
 // 前後ノートナビ
 // ============================================================
 function siblingNavHTML(n, c, s) {
-  if (!n.folderId) return ""; // フォルダに属していない場合は表示しない
+  if (!n.folderId) return "";
   const siblings = state.items.filter(i => i.kind==="note" && i.folderId===n.folderId);
-  if (siblings.length <= 1) return ""; // 1つだけなら表示しない
+  if (siblings.length <= 1) return "";
   const idx = siblings.findIndex(i => i.id===n.id);
   const prev = idx > 0 ? siblings[idx-1] : null;
   const next = idx < siblings.length-1 ? siblings[idx+1] : null;
+  const folder = folderOf(n);
+  const folderName = folder ? esc(folder.title) : "";
 
-  const btnStyle = `background:none;border:1px solid ${c.bd};border-radius:10px;
-    padding:10px 14px;cursor:pointer;font-family:inherit;color:${c.ui};
-    display:flex;flex-direction:column;gap:4px;max-width:45%;`;
-  const labelStyle = `font-size:11px;opacity:0.55;`;
-  const titleStyle = `font-size:13px;font-weight:600;color:${c.ch};
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;`;
-  const emptyStyle = `font-size:11px;opacity:0.35;max-width:45%;padding:10px 0;`;
+  const btnBase = `width:calc(50% - 6px);border-radius:12px;padding:12px 14px;cursor:pointer;
+    font-family:inherit;display:flex;flex-direction:column;gap:5px;border:none;
+    background:${c.header};`;
+  const labelStyle = `font-size:11px;opacity:0.6;font-weight:600;letter-spacing:0.03em;`;
+  const titleStyle = `font-size:13px;font-weight:700;color:${c.ch};
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+  const folderStyle = `font-size:10px;opacity:0.4;`;
+  const emptyStyle = `width:calc(50% - 6px);font-size:11px;opacity:0.3;
+    display:flex;align-items:center;padding:0 4px;`;
 
   const prevHTML = prev
-    ? `<button onclick="openNote(${prev.id})" style="${btnStyle}text-align:left;">
+    ? `<button onclick="openNote(${prev.id})" style="${btnBase}text-align:left;">
         <span style="${labelStyle}">‹ 前のノート</span>
         <span style="${titleStyle}">${esc(prev.title)}</span>
+        <span style="${folderStyle}">📁 ${folderName}</span>
        </button>`
     : `<span style="${emptyStyle}">最初のノートです</span>`;
 
   const nextHTML = next
-    ? `<button onclick="openNote(${next.id})" style="${btnStyle}text-align:right;align-items:flex-end;">
+    ? `<button onclick="openNote(${next.id})" style="${btnBase}text-align:right;align-items:flex-end;">
         <span style="${labelStyle}">次のノート ›</span>
         <span style="${titleStyle}">${esc(next.title)}</span>
+        <span style="${folderStyle}">📁 ${folderName}</span>
        </button>`
-    : `<span style="${emptyStyle};text-align:right;">最後のノートです</span>`;
+    : `<span style="${emptyStyle}justify-content:flex-end;">最後のノートです</span>`;
 
-  return `<div style="display:flex;justify-content:space-between;align-items:center;
-    padding:20px 20px 40px;border-top:1px solid ${c.bd};margin-top:10px;">
-    ${prevHTML}
-    ${nextHTML}
-  </div>`;
+  // PC/タブ（768px以上）はボタン間中央にフォルダ名
+  const centerFolder = `<span class="nav-center-folder" style="font-size:12px;opacity:0.45;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;text-align:center;">
+    📁 ${folderName}</span>`;
+
+  return `<style>.nav-center-folder{display:none;}
+    @media(min-width:768px){.nav-center-folder{display:block;}}</style>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:24px 20px 48px;border-top:1px solid ${c.bd};margin-top:16px;">
+      ${prevHTML}
+      ${centerFolder}
+      ${nextHTML}
+    </div>`;
 }
 
 // ============================================================
@@ -1015,7 +1063,8 @@ function driveSignIn() {
       if(resp.error){showToast("認証エラー: "+resp.error);return;}
       _accessToken=resp.access_token;
       showToast("Googleアカウントに接続しました");
-      await driveLoad(); renderDriveStatus();
+      await driveLoad();
+      renderDriveStatus();
     },
   });
   client.requestAccessToken();
@@ -1044,8 +1093,7 @@ async function driveSave() {
         if(item.kind==="note"){const{segments,...rest}=item;return rest;}
         return item;
       }),
-      colorIdx:state.colorIdx, sizeIdx:state.sizeIdx,
-      showPinyin:state.showPinyin, nextId:state.nextId,
+      nextId:state.nextId,
       savedAt:new Date().toISOString(),
     });
     const fileId=await findDriveFile();
@@ -1080,11 +1128,17 @@ async function driveLoad() {
     const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
       {headers:{Authorization:"Bearer "+_accessToken}});
     const data=await res.json();
-    state.items    =data.items||state.items;
-    state.colorIdx =data.colorIdx??state.colorIdx;
-    state.sizeIdx  =data.sizeIdx??state.sizeIdx;
-    state.showPinyin=data.showPinyin??state.showPinyin;
-    state.nextId   =data.nextId??state.nextId;
+    if (!data.items || data.items.length === 0) {
+      state.page="list";
+      state.items=[];
+      state.unsaved=false;
+      render();
+      showToast("データがまだありません。新規ノートを作成してください");
+      return;
+    }
+    state.items=data.items;
+    // 設定はデバイスデフォルトを使う（クラウドから読まない）
+    state.nextId=data.nextId??state.nextId;
     state.items.forEach(item=>{
       if(item.kind==="note"){
         item.segments=buildSegments(item.raw||"", []);
@@ -1092,6 +1146,7 @@ async function driveLoad() {
       }
     });
     state.unsaved=false;
+    state.page="list";
     showToast("読み込みました ✓"); render();
   } catch(e){ showToast("読み込みエラー: "+e.message); }
 }
@@ -1120,13 +1175,10 @@ function driveButtonsHTML(c) {
 // BOOT
 // ============================================================
 function boot() {
-  state.sizeIdx=defaultSizeIdx();
-  state.items.forEach(item=>{
-    if(item.kind==="note"){
-      if(!item.segments||item.segments.length===0)item.segments=buildSegments(item.raw||"",[]);
-      if(item.bookmarkIdx===undefined)item.bookmarkIdx=null;
-    }
-  });
+  const def = getDeviceDefaults();
+  state.sizeIdx   = def.sizeIdx;
+  state.colorIdx  = def.colorIdx;
+  state.showPinyin= def.showPinyin;
   render();
 }
 function waitAndBoot(){
