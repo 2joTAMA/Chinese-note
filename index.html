@@ -239,7 +239,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 /* スクロールボタン */
 .scroll-btns {
   position: fixed; bottom: 32px; left: 16px; z-index: 30;
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 16px;
 }
 @media (min-width: 1024px) {
   .scroll-btns { left: auto; right: 40px; }
@@ -756,6 +756,11 @@ function renderView(app) {
     </div>
     ${jumpBtn}
     ${!bm ? siblingNavHTML(n, c, s) : ""}
+    ${!bm ? `<div style="width:100%;line-height:0;">
+      <img src="images/end-of-note.png"
+        style="width:100%;height:auto;display:block;"
+        onerror="this.style.display='none'">
+    </div>` : ""}
       ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
         style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
@@ -819,9 +824,7 @@ function siblingNavHTML(n, c, s) {
   const folder = folderOf(n);
   const folderName = folder ? esc(folder.title) : "";
 
-  // アクセントカラー（夜=緑、昼=濃いベージュ）
   const navBg   = c.id === "night" ? "rgba(136,192,160,0.18)" : "#d4c4a8";
-  const navBgHov = c.id === "night" ? "rgba(136,192,160,0.3)"  : "#c8b490";
   const navText = c.id === "night" ? c.py : "#5a3e20";
 
   const btnBase = `width:calc(50% - 6px);border-radius:12px;padding:14px 16px;cursor:pointer;
@@ -857,15 +860,9 @@ function siblingNavHTML(n, c, s) {
        </button>`
     : `<div style="${emptyStyle}">最後のノートです</div>`;
 
-  const endImg = `<div style="width:100%;line-height:0;margin-bottom:-2px;">
-    <img src="images/end-of-note.png"
-      style="width:100%;height:auto;display:block;"
-      onerror="this.style.display='none'">
-  </div>`;
-
-  return `${endImg}
-    <div style="display:flex;justify-content:space-between;align-items:stretch;gap:12px;
-      padding:24px 20px 48px;border-top:1px solid ${c.bd};">
+  // 前後リンクのみ返す（画像はrenderViewで後ろに追加）
+  return `<div style="display:flex;justify-content:space-between;align-items:stretch;gap:12px;
+      padding:24px 20px 0;border-top:1px solid ${c.bd};">
       ${prevHTML}
       ${nextHTML}
     </div>`;
