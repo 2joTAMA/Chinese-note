@@ -728,7 +728,10 @@ function childNoteRowHTML(n, c, em) {
   }
   return `<div class="child-note-row" id="item-${n.id}"
     style="border-color:${c.childBd};border-left-color:${c.accent};"
-    data-id="${n.id}" data-kind="note">${inner}</div>`;
+    data-id="${n.id}" data-kind="note"
+    ondragover="itemDragOver(event,${n.id})"
+    ondragleave="itemDragLeave(event,${n.id})"
+    ondrop="itemDrop(event,${n.id})">${inner}</div>`;
 }
 
 function topNoteRowHTML(n, c, em) {
@@ -756,7 +759,10 @@ function topNoteRowHTML(n, c, em) {
       </div>`;
   }
   return `<div class="top-note-row" id="item-${n.id}" style="border-color:${c.bd};"
-    data-id="${n.id}" data-kind="note">${inner}</div>`;
+    data-id="${n.id}" data-kind="note"
+    ondragover="itemDragOver(event,${n.id})"
+    ondragleave="itemDragLeave(event,${n.id})"
+    ondrop="itemDrop(event,${n.id})">${inner}</div>`;
 }
 
 // ============================================================
@@ -1245,19 +1251,145 @@ function closeSwipeOnBg(e) {
 // ============================================================
 // DRAG & DROP
 // ============================================================
-function dragStart(e,id) {
-  state.dragId=id; e.dataTransfer.setData("text/plain",String(id)); e.dataTransfer.effectAllowed="move";
-  setTimeout(()=>e.target.closest(".top-note-row,.child-note-row")?.classList.add("dragging"),0);
+// ============================================================
+// DRAG & DROP（並べ替え＋フォルダ移動）
+// ============================================================
+let _dragOverId = null;
+let _dragInsertAfter = null; // trueなら対象の下、falseなら上
+
+function dragStart(e, id) {
+  state.dragId = id;
+  e.dataTransfer.setData("text/plain", String(id));
+  e.dataTransfer.effectAllowed = "move";
+  const dragItem = state.items.find(i => i.id === id);
+  state._dragKind = dragItem?.kind || "note";
+  setTimeout(() => {
+    document.getElementById("item-" + id)?.classList.add("dragging");
+    // フォルダをドラッグ中はノートをグレーアウト
+    if (state._dragKind === "folder") {
+      document.querySelectorAll(".top-note-row, .child-note-row").forEach(el => {
+        el.style.opacity = "0.3"; el.style.pointerEvents = "none";
+      });
+    }
+  }, 0);
 }
-function dragEnd(e){ e.target.closest(".top-note-row,.child-note-row")?.classList.remove("dragging"); state.dragId=null; }
-function folderDragOver(e,id){ if(!state.dragId)return; e.preventDefault(); document.getElementById("item-"+id)?.classList.add("drag-over-folder"); }
-function folderDragLeave(e,id){ document.getElementById("item-"+id)?.classList.remove("drag-over-folder"); }
-function folderDrop(e,id){
-  e.preventDefault(); document.getElementById("item-"+id)?.classList.remove("drag-over-folder");
-  const noteId=parseInt(e.dataTransfer.getData("text/plain"));
-  const n=state.items.find(i=>i.id===noteId&&i.kind==="note");
-  if(n){ n.folderId=id; markUnsaved(); }
-  state.dragId=null; render();
+
+function dragEnd(e) {
+  document.getElementById("item-" + state.dragId)?.classList.remove("dragging");
+  // グレーアウト解除
+  document.querySelectorAll(".top-note-row, .child-note-row").forEach(el => {
+    el.style.opacity = ""; el.style.pointerEvents = "";
+  });
+  clearInsertionLine();
+  state.dragId = null; state._dragKind = null;
+  _dragOverId = null;
+}
+
+function folderDragOver(e, id) {
+  if (!state.dragId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  if (state._dragKind === "folder") {
+    // フォルダ同士は並べ替え（上/下）
+    _dragOverId = id;
+    const el = document.getElementById("item-" + id);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      _dragInsertAfter = (e.clientY - rect.top) > rect.height / 2;
+      showInsertionLine(id, _dragInsertAfter);
+    }
+  } else {
+    // ノートはフォルダにドロップ→フォルダの末尾へ
+    document.getElementById("item-" + id)?.classList.add("drag-over-folder");
+  }
+}
+function folderDragLeave(e, id) {
+  document.getElementById("item-" + id)?.classList.remove("drag-over-folder");
+  if (_dragOverId === id) { clearInsertionLine(); _dragOverId = null; }
+}
+
+function itemDragOver(e, id) {
+  if (!state.dragId || state.dragId === id) return;
+  if (state._dragKind === "folder") return; // フォルダドラッグ中はノート上のイベント無効
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  _dragOverId = id;
+  const el = document.getElementById("item-" + id);
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    _dragInsertAfter = (e.clientY - rect.top) > rect.height / 2;
+    showInsertionLine(id, _dragInsertAfter);
+  }
+}
+function itemDragLeave(e, id) {
+  if (_dragOverId === id) { clearInsertionLine(); _dragOverId = null; }
+}
+
+function showInsertionLine(id, after) {
+  clearInsertionLine();
+  const el = document.getElementById("item-" + id);
+  if (!el) return;
+  const line = document.createElement("div");
+  line.id = "insertion-line";
+  line.style.cssText = `height:3px;background:${col().accent};border-radius:2px;margin:0;`;
+  if (after) el.after(line);
+  else el.before(line);
+}
+function clearInsertionLine() {
+  document.getElementById("insertion-line")?.remove();
+}
+
+function folderDrop(e, id) {
+  e.preventDefault();
+  document.getElementById("item-" + id)?.classList.remove("drag-over-folder");
+  clearInsertionLine();
+  const dragId = parseInt(e.dataTransfer.getData("text/plain"));
+  if (state._dragKind === "folder") {
+    // フォルダの並べ替え
+    reorderItems(dragId, id, _dragInsertAfter);
+  } else {
+    // ノートをフォルダの末尾へ移動
+    const n = state.items.find(i => i.id === dragId && i.kind === "note");
+    if (n) { n.folderId = id; markUnsaved(); reorderItems(dragId, id, true); }
+  }
+  state.dragId = null; state._dragKind = null; _dragOverId = null;
+  render();
+}
+
+function itemDrop(e, targetId) {
+  e.preventDefault();
+  clearInsertionLine();
+  const dragId = parseInt(e.dataTransfer.getData("text/plain"));
+  if (dragId === targetId) { state.dragId=null; return; }
+  reorderItems(dragId, targetId, _dragInsertAfter);
+  state.dragId = null; state._dragKind = null; _dragOverId = null;
+  render();
+}
+
+// アイテムをtargetIdの前/後に移動
+function reorderItems(dragId, targetId, insertAfter) {
+  const items = state.items;
+  const dragIdx   = items.findIndex(i => i.id === dragId);
+  const targetIdx = items.findIndex(i => i.id === targetId);
+  if (dragIdx < 0 || targetIdx < 0) return;
+
+  const [dragged] = items.splice(dragIdx, 1);
+  const newTargetIdx = items.findIndex(i => i.id === targetId);
+  const insertIdx = insertAfter ? newTargetIdx + 1 : newTargetIdx;
+  items.splice(insertIdx, 0, dragged);
+
+  // ドラッグ先のフォルダコンテキストに合わせてfolderIdを更新（ノートの場合）
+  if (dragged.kind === "note") {
+    const target = items.find(i => i.id === targetId);
+    if (target) {
+      if (target.kind === "folder") {
+        dragged.folderId = target.id;
+      } else if (target.kind === "note") {
+        dragged.folderId = target.folderId || null;
+      }
+    }
+  }
+  markUnsaved();
 }
 
 // ============================================================
@@ -1527,25 +1659,53 @@ function expandSegment(segIdx) {
 
   const markers = n.markers || [];
 
-  const btnsHTML = words.map((w, wi) => {
+  // 選択中の単語インデックスセット
+  _selectedWordIdxs = new Set();
+
+  // 選択色（夜：緑系、昼：茶系）
+  const selBg    = c.id==="night" ? "rgba(100,180,130,0.5)" : "rgba(160,120,60,0.25)";
+  const selBd    = c.id==="night" ? "#64b482" : "#a07830";
+  const markedBg = "rgba(255,220,0,0.55)";
+  const markedBd = "#d4b800";
+  const normalBg = c.id==="night" ? c.input : c.header;
+
+  // ワードごとのセル（縦線区切り：border-rightで表現）
+  const cellsHTML = words.map((w, wi) => {
     const hasMarker = markers.some(m => m.segIdx===segIdx && m.text===w.text);
-    const bg = hasMarker ? "rgba(255,220,0,0.7)" : (c.id==="night" ? "#252530" : "#ede5d8");
-    const border = hasMarker ? "#e8c000" : c.bd;
-    return `<button onclick="toggleWordMarker(${segIdx},${wi})"
-      style="background:${bg};border:1px solid ${border};border-radius:6px;
-        padding:4px 8px;cursor:pointer;font-family:inherit;display:flex;
-        flex-direction:column;align-items:center;gap:1px;">
+    const isLast = wi === words.length - 1;
+    return `<span id="wc-${segIdx}-${wi}"
+      onclick="selectWord(${segIdx},${wi})"
+      data-has-marker="${hasMarker}"
+      style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
+        padding:6px 8px;cursor:pointer;
+        background:${hasMarker ? markedBg : normalBg};
+        ${!isLast ? `border-right:1px solid ${c.bd};` : ""}">
       <span style="font-size:${s.ch}px;font-weight:700;color:${c.ch};">${esc(w.text)}</span>
       <span style="font-size:${s.py}px;color:${c.py};">${w.pinyin}</span>
-    </button>`;
+    </span>`;
   }).join("");
+
+  // 登録ボタン
+  const regBtn = `<button id="word-reg-btn-${segIdx}" onclick="registerSelectedWords(${segIdx})"
+    style="display:none;background:#e8820a;border:none;border-radius:8px;
+      padding:6px 14px;font-size:13px;font-weight:700;color:#fff;
+      cursor:pointer;font-family:inherit;margin-left:8px;flex-shrink:0;">登録</button>`;
 
   // セグメントをボタン群に差し替え
   const wrapper = document.createElement("div");
   wrapper.id = "seg-expanded-" + segIdx;
   wrapper.dataset.segIdx = segIdx;
-  wrapper.style.cssText = `display:flex;flex-wrap:wrap;gap:6px;padding:8px 0;`;
-  wrapper.innerHTML = btnsHTML;
+  wrapper.style.cssText = `display:flex;align-items:center;flex-wrap:wrap;
+    row-gap:10px;column-gap:0;padding:8px 0;`;
+  // 1行分をまとめたコンテナ
+  const row = document.createElement("div");
+  row.style.cssText = `display:inline-flex;flex-wrap:wrap;border:1px solid ${c.bd};
+    border-radius:10px;overflow:hidden;`;
+  row.innerHTML = cellsHTML;
+  wrapper.appendChild(row);
+  const regBtnEl = document.createElement("div");
+  regBtnEl.innerHTML = regBtn;
+  wrapper.appendChild(regBtnEl.firstChild);
 
   el.replaceWith(wrapper);
 
@@ -1554,40 +1714,76 @@ function expandSegment(segIdx) {
 }
 
 let _segWords = [];
+let _selectedWordIdxs = new Set();
 
-function toggleWordMarker(segIdx, wordIdx) {
+function selectWord(segIdx, wordIdx) {
+  const n = note(); if (!n) return;
+  const w = _segWords[wordIdx]; if (!w) return;
+  const c = col();
+  const markedBg = "rgba(255,220,0,0.55)";
+  const selBg    = c.id==="night" ? "rgba(100,180,130,0.5)" : "rgba(160,120,60,0.25)";
+  const selBd    = c.id==="night" ? "#64b482" : "#a07830";
+  const normalBg = c.id==="night" ? c.input : c.header;
+
+  const hasMarker = (n.markers||[]).some(m => m.segIdx===segIdx && m.text===w.text);
+
+  if (hasMarker) {
+    // マーカー済みなら即削除
+    n.markers = n.markers.filter(m => !(m.segIdx===segIdx && m.text===w.text));
+    markUnsaved();
+    showToast("マーカーを削除しました");
+    const cell = document.getElementById(`wc-${segIdx}-${wordIdx}`);
+    if (cell) { cell.style.background = normalBg; cell.dataset.hasMarker = "false"; }
+    return;
+  }
+
+  // 選択トグル
+  if (_selectedWordIdxs.has(wordIdx)) {
+    _selectedWordIdxs.delete(wordIdx);
+  } else {
+    _selectedWordIdxs.add(wordIdx);
+  }
+  const isSelected = _selectedWordIdxs.has(wordIdx);
+  const cell = document.getElementById(`wc-${segIdx}-${wordIdx}`);
+  if (cell) cell.style.background = isSelected ? selBg : normalBg;
+
+  // 登録ボタンの表示/非表示
+  const regBtn = document.getElementById(`word-reg-btn-${segIdx}`);
+  if (regBtn) regBtn.style.display = _selectedWordIdxs.size > 0 ? "inline-block" : "none";
+}
+
+function registerSelectedWords(segIdx) {
   const n = note(); if (!n) return;
   if (!n.markers) n.markers = [];
-  const w = _segWords[wordIdx]; if (!w) return;
+  if (_selectedWordIdxs.size === 0) return;
 
-  const existing = n.markers.findIndex(m => m.segIdx===segIdx && m.text===w.text);
-  if (existing >= 0) {
-    n.markers.splice(existing, 1);
-    showToast("マーカーを削除しました");
-  } else {
+  // 選択インデックスを昇順にソートして連続テキストを結合
+  const sorted = [..._selectedWordIdxs].sort((a,b) => a-b);
+  const text   = sorted.map(i => _segWords[i]?.text || "").join("");
+  const pinyin = sorted.map(i => _segWords[i]?.pinyin || "").join(" ");
+
+  if (!text) return;
+
+  // 重複チェック
+  const dup = n.markers.some(m => m.segIdx===segIdx && m.text===text);
+  if (!dup) {
     const folder = folderOf(n);
     n.markers.push({
-      id: Date.now() + wordIdx,
-      segIdx,
-      start: 0, end: [...w.text].length,
-      text: w.text,
-      pinyin: w.pinyin,
+      id: Date.now(),
+      segIdx, start: 0, end: [...text].length,
+      text, pinyin,
       noteId: n.id, noteTitle: n.title,
       folderTitle: folder ? folder.title : "",
       createdAt: new Date().toISOString(),
     });
-    showToast("マーカーを追加しました");
+    markUnsaved();
+    showToast(`「${text}」を登録しました`);
+  } else {
+    showToast("すでに登録されています");
   }
-  markUnsaved();
 
-  // ボタンの色だけ更新（rerender不要）
-  const btn = document.querySelector(`#seg-expanded-${segIdx} button:nth-child(${wordIdx+1})`);
-  if (btn) {
-    const c = col();
-    const hasMarker = n.markers.some(m => m.segIdx===segIdx && m.text===w.text);
-    btn.style.background = hasMarker ? "rgba(255,220,0,0.7)" : (c.id==="night" ? "#252530" : "#ede5d8");
-    btn.style.borderColor = hasMarker ? "#e8c000" : c.bd;
-  }
+  // 展開を閉じてセグメントを元に戻す
+  collapseSegment();
 }
 
 function collapseSegment() {
@@ -1811,9 +2007,7 @@ function renderVocab(app) {
           ${em ? `<input type="checkbox" class="vocab-checkbox" id="chk-${m.id}"
             onchange="toggleVocabCheck(${m.id},this.checked)">` : ""}
           <div class="vocab-card-inner">
-            <div class="vocab-chinese" style="font-size:${s.ch}px;color:${c.ch};">
-              <span style="background:rgba(255,220,0,0.4);border-radius:2px;padding:0 2px;">${esc(m.text)}</span>
-            </div>
+            <div class="vocab-chinese" style="font-size:${s.ch}px;color:${c.ch};">${esc(m.text)}</div>
             ${state.showPinyin ? `<div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};">${m.pinyin||""}</div>` : ""}
             <div class="vocab-source" style="color:${c.ui};">${esc(source)}</div>
           </div>
@@ -1911,10 +2105,21 @@ function bottomTabsHTML(c) {
 
 function goNoteTab() {
   if (state.page === "list" || state.page === "view" || state.page === "edit") return;
-  state.page = "list"; render();
+  // 単語帳からノートに戻るとき、前回のページ・位置を復元
+  const prevPage = state._noteLastPage || "list";
+  const prevNoteId = state._noteLastNoteId || null;
+  const prevScrollY = state._noteLastScrollY || 0;
+  state.page = prevPage;
+  state.currentNoteId = prevNoteId;
+  render();
+  requestAnimationFrame(() => window.scrollTo(0, prevScrollY));
 }
 function goVocabTab() {
   if (state.page === "vocab") return;
+  // ノートの現在位置を保存
+  state._noteLastPage = state.page;
+  state._noteLastNoteId = state.currentNoteId;
+  state._noteLastScrollY = window.scrollY;
   state.page = "vocab"; render();
 }
 
