@@ -1515,7 +1515,9 @@ async function driveLoad() {
     });
     state.unsaved=false;
     state.page="list";
-    showToast("読み込みました ✓"); render();
+    const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
+    const kb = (bytes / 1024).toFixed(1);
+    showToast("読み込みました ✓  " + kb + " KB"); render();
   } catch(e){ showToast("読み込みエラー: "+e.message); }
 }
 function renderDriveStatus(){ if(state.page==="list")render(); }
