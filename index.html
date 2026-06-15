@@ -223,7 +223,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 /* スクロールボタン */
 .scroll-btns {
   position: fixed; bottom: 32px; left: 16px; z-index: 30;
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 16px;
 }
 @media (min-width: 1024px) {
   .scroll-btns { left: auto; right: 40px; }
@@ -756,11 +756,6 @@ function renderView(app) {
     </div>
     ${jumpBtn}
     ${!bm ? siblingNavHTML(n, c, s) : ""}
-    ${!bm ? `<div style="width:100%;line-height:0;">
-      <img src="images/end-of-note.png"
-        style="width:100%;height:auto;display:block;"
-        onerror="this.style.display='none'">
-    </div>` : ""}
       ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
         style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
