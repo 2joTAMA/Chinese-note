@@ -963,7 +963,12 @@ function renderEdit(app) {
 // ============================================================
 // ACTIONS
 // ============================================================
-function toggleSettings() { state.showSettings=!state.showSettings; render(); }
+function toggleSettings() {
+  const sy = window.scrollY;
+  state.showSettings=!state.showSettings;
+  render();
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+}
 function setSizeIdx(i)    { state.sizeIdx=i; render(); }
 function setColorIdx(i)   { state.colorIdx=i; render(); }
 function togglePinyin()   { state.showPinyin=!state.showPinyin; render(); }
