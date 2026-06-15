@@ -2028,6 +2028,7 @@ function getAllMarkers() {
     item.markers.forEach(m => {
       all.push({
         ...m,
+        pinyin: (m.pinyin||"").trim() || getPy(m.text), // 保存時に空なら再生成
         noteId: item.id,
         noteTitle: item.title,
         folderTitle: folder ? folder.title : "",
@@ -2077,7 +2078,7 @@ function renderVocab(app) {
             onchange="toggleVocabCheck(${m.id},this.checked)">` : ""}
           <div class="vocab-card-inner">
             <div class="vocab-chinese" style="font-size:${s.ch}px;color:${vcol.ch};">${esc(m.text)}</div>
-            ${state.showPinyin ? `<div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};margin-top:4px;">${m.pinyin||getPy(m.text)}</div>` : ""}
+            ${state.showPinyin ? `<div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};margin-top:4px;">${(m.pinyin||"").trim()||getPy(m.text)}</div>` : ""}
             <div class="vocab-source" style="color:${vcol.ui};">${esc(source)}</div>
           </div>
           ${!em ? `<button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId},${m.segIdx})"
