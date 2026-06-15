@@ -464,14 +464,7 @@ function getPy(text) {
 // ============================================================
 // STATE
 // ============================================================
-const NOVEL_RAW =
-`金陵，大梁帝都。物宝天华王气蒸蔚，这里连城门也与他处不同，格外的巍峨坚实。川流不息入城的人流中，一辆青蓬双辕的马车不起眼地夹在其中，摇摇缓行，在距离城门数丈之地停顿了下来。
-车帘掀起，一个月白衣衫，容颜清朗的年轻人跳下车，前行几步，仰起头凝望着城门上方的"金陵"二字。
-走在马车前方的两名骑士察觉到后面有异样，回过头看了一下，一齐拨转马头奔了过来。这两人都是贵族公子的打扮，年龄也大致相仿，跑在前面的一个远远就在问："苏兄，你怎么了？"
-梅长苏没有回答，他依然保持着仰望城门的姿势，表情凝然不动，一头乌发被风吹起，有几丝零散地覆在苍白的面颊上，使得整个人透出一股深邃的沧桑与悲凉。
-"苏兄是不是累了？"这时另外一人也奔至近前，关切地道，"就快到了，今天可以好好歇歇。"
-"景睿，谢弼，"梅长苏毫无颜色的唇边掠过一抹浅淡的笑，"我想在这里再站一会儿……这么多年没来，想不到金陵城几乎丝毫未变，进了城门后，多半也依然是冠盖满京华的盛况吧……"
-萧景睿微微有些怔忡，问道："怎么苏兄以前……来过金陵？"`;
+
 
 let state = {
   page: "connect",   // "connect" | "list" | "view" | "edit" | "vocab"
@@ -616,7 +609,7 @@ function renderList(app) {
 
   app.innerHTML = `
     ${mkHeader("",
-      `<div class="header-main-title" style="color:${c.ch};">中国語ノート</div>`,
+      `<div class="header-main-title" style="color:${c.ch};">ノート一覧</div>`,
       rightBtns
     )}
     ${settingsPanel()}
@@ -712,7 +705,7 @@ function folderRowHTML(folder, c, em) {
           text-overflow:ellipsis;flex:1;min-width:0;">${esc(folder.title)}</span>
         <span style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px;">
           ${children.length > 0 ? `<span style="background:${c.accent};color:${c.bg};
-            font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">${children.length}</span>` : ""}
+            font-size:10px;font-weight:700;font-family:'Inter',sans-serif;padding:2px 7px;border-radius:999px;">${children.length}</span>` : ""}
           <span class="material-icons bm-folder-icon"
             style="font-size:16px;color:#e8820a;${!isOpen && children.some(n => n.bookmarkIdx !== null && n.bookmarkIdx !== undefined) ? "" : "visibility:hidden;"}">
             bookmark</span>
@@ -1496,6 +1489,7 @@ async function driveSave() {
     const json=JSON.stringify({
       items:state.items.map(item=>{
         if(item.kind==="note"){const{segments,...rest}=item;return rest;}
+        if(item.kind==="folder"){const{open,...rest}=item;return rest;} // open状態は保存しない
         return item;
       }),
       nextId:state.nextId,
@@ -1553,6 +1547,7 @@ async function driveLoad() {
     });
     state.unsaved=false;
     state.page="list";
+    updateFolderOpenState();
     const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
     const kb = (bytes / 1024).toFixed(1);
     showToast("読み込みました " + kb + " KB"); render();
@@ -1680,9 +1675,16 @@ function expandSegment(segIdx) {
       // segment結果: [{origin, type, pinyin}]
       segResult.forEach(item => {
         if (item.origin && item.origin.trim()) {
-          const py = Array.isArray(item.pinyin)
-            ? item.pinyin.join(" ")
-            : (item.pinyin || "");
+          // pinyin-proのsegment結果はpinyinが文字列または配列
+          let py = "";
+          if (Array.isArray(item.pinyin)) {
+            py = item.pinyin.map(p => typeof p === "string" ? p : (p?.pinyin||"")).join(" ");
+          } else if (typeof item.pinyin === "string") {
+            py = item.pinyin;
+          } else {
+            // フォールバック：文字単位でpinyinを生成
+            py = window.pinyinPro.pinyin(item.origin, {toneType:"symbol",separator:" "});
+          }
           words.push({ text: item.origin, pinyin: py });
         }
       });
