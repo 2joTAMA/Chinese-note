@@ -756,6 +756,11 @@ function renderView(app) {
     </div>
     ${jumpBtn}
     ${!bm ? siblingNavHTML(n, c, s) : ""}
+    ${!bm ? `<div style="width:100%;line-height:0;">
+      <img src="images/end-of-note.png"
+        style="width:100%;height:auto;display:block;"
+        onerror="this.style.display='none'">
+    </div>` : ""}
       ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
         style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
@@ -833,7 +838,7 @@ function siblingNavHTML(n, c, s) {
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;`;
   const iconStyle = `font-size:28px;color:${navText};flex-shrink:0;`;
   const emptyStyle = `width:calc(50% - 6px);border-radius:12px;padding:14px 16px;
-    display:flex;align-items:center;justify-content:center;
+    display:flex;align-items:center;justify-content:center;box-sizing:border-box;
     background:${c.id==="night"?"rgba(136,192,160,0.06)":"rgba(0,0,0,0.06)"};
     font-size:13px;font-weight:500;color:${c.ui};opacity:0.5;`;
 
@@ -864,7 +869,7 @@ function siblingNavHTML(n, c, s) {
   </div>`;
 
   return `${endImg}
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
+    <div style="display:flex;justify-content:space-between;align-items:stretch;gap:12px;
       padding:24px 20px 48px;border-top:1px solid ${c.bd};">
       ${prevHTML}
       ${nextHTML}
@@ -1039,7 +1044,12 @@ function deleteItem(id) {
 // ============================================================
 let _movingNoteId=null;
 
-// FABからの＋ → 直接新規ノートモーダルへ
+function openNewModal() {
+  render();
+  setTimeout(()=>{ document.getElementById("newModal")?.classList.add("open"); }, 0);
+}
+
+// FABからの＋ → メニューモーダル経由
 function openNewNoteModal() {
   render();
   setTimeout(()=>{
