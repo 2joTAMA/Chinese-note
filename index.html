@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { min-height: 100vh; transition: background 0.3s, color 0.3s;
@@ -380,6 +381,7 @@ function renderList(app) {
   ).join("");
 
   const rightBtns =
+    driveButtonsHTML(c) +
     hbtn(em?"check":"edit", em?"完了":"編集", "toggleListEdit()", c.ui) +
     hbtn("settings", "設定", "toggleSettings()", c.ui);
 
@@ -868,6 +870,161 @@ function folderDrop(e,id) {
 // ============================================================
 function esc(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ============================================================
+// GOOGLE DRIVE 連携
+// ============================================================
+const CLIENT_ID   = "408102016204-l1dfakfohg69q7qup2q967u6pmutc7bm.apps.googleusercontent.com";
+const SCOPES      = "https://www.googleapis.com/auth/drive.appdata";
+const FILE_NAME   = "chinese-note-data.json";
+
+let _accessToken  = null;
+let _driveFileId  = null;  // キャッシュ
+
+// --- 認証 ---
+function driveSignIn() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast("認証エラー: " + resp.error); return; }
+      _accessToken = resp.access_token;
+      showToast("Googleアカウントに接続しました");
+      // 接続後まず読み込みを試みる
+      await driveLoad();
+      renderDriveStatus();
+    },
+  });
+  client.requestAccessToken();
+}
+
+function driveSignOut() {
+  if (_accessToken) google.accounts.oauth2.revoke(_accessToken, ()=>{});
+  _accessToken = null;
+  _driveFileId = null;
+  showToast("切断しました");
+  renderDriveStatus();
+}
+
+// --- ファイルID検索 ---
+async function findDriveFile() {
+  if (_driveFileId) return _driveFileId;
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'&fields=files(id)`,
+    { headers: { Authorization: "Bearer " + _accessToken } }
+  );
+  const data = await res.json();
+  _driveFileId = data.files?.[0]?.id || null;
+  return _driveFileId;
+}
+
+// --- 保存 ---
+async function driveSave() {
+  if (!_accessToken) { showToast("先にGoogleアカウントに接続してください"); return; }
+  showToast("保存中...");
+  try {
+    const json = JSON.stringify({
+      items: state.items.map(item => {
+        if (item.kind === "note") {
+          // segmentsはrawから再生成できるので保存不要（サイズ削減）
+          const { segments, ...rest } = item;
+          return rest;
+        }
+        return item;
+      }),
+      colorIdx: state.colorIdx,
+      sizeIdx: state.sizeIdx,
+      showPinyin: state.showPinyin,
+      nextId: state.nextId,
+      savedAt: new Date().toISOString(),
+    });
+
+    const fileId = await findDriveFile();
+    const blob = new Blob([json], { type: "application/json" });
+
+    if (fileId) {
+      // 既存ファイルを更新
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: "PATCH",
+        headers: { Authorization: "Bearer " + _accessToken, "Content-Type": "application/json" },
+        body: blob,
+      });
+    } else {
+      // 新規作成
+      const meta = { name: FILE_NAME, parents: ["appDataFolder"] };
+      const form = new FormData();
+      form.append("metadata", new Blob([JSON.stringify(meta)], { type: "application/json" }));
+      form.append("file", blob);
+      const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + _accessToken },
+        body: form,
+      });
+      const data = await res.json();
+      _driveFileId = data.id;
+    }
+    showToast("Google Driveに保存しました ✓");
+  } catch(e) {
+    showToast("保存エラー: " + e.message);
+  }
+}
+
+// --- 読み込み ---
+async function driveLoad() {
+  if (!_accessToken) { showToast("先にGoogleアカウントに接続してください"); return; }
+  showToast("読み込み中...");
+  try {
+    const fileId = await findDriveFile();
+    if (!fileId) { showToast("保存データが見つかりません"); return; }
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: "Bearer " + _accessToken } }
+    );
+    const data = await res.json();
+    // stateに反映
+    state.items    = data.items || state.items;
+    state.colorIdx = data.colorIdx ?? state.colorIdx;
+    state.sizeIdx  = data.sizeIdx  ?? state.sizeIdx;
+    state.showPinyin = data.showPinyin ?? state.showPinyin;
+    state.nextId   = data.nextId   ?? state.nextId;
+    // segmentsを再生成
+    state.items.forEach(item => {
+      if (item.kind === "note") {
+        item.segments = buildSegments(item.raw || "", []);
+        if (item.scrollY    === undefined) item.scrollY    = 0;
+        if (item.bookmarkIdx === undefined) item.bookmarkIdx = null;
+      }
+    });
+    showToast("読み込みました ✓");
+    render();
+  } catch(e) {
+    showToast("読み込みエラー: " + e.message);
+  }
+}
+
+// Drive接続状態をヘッダーに反映（一覧画面のみ）
+function renderDriveStatus() {
+  if (state.page === "list") render();
+}
+
+// 一覧画面のヘッダーに「Drive」ボタンを出す
+function driveButtonsHTML(c) {
+  if (!_accessToken) {
+    return `<button onclick="driveSignIn()" class="hbtn" style="color:${c.accent};">
+      <span class="material-icons">cloud</span>
+      <span class="hbtn-label">接続</span>
+    </button>`;
+  }
+  return `
+    <button onclick="driveLoad()" class="hbtn" style="color:${c.accent};">
+      <span class="material-icons">cloud_download</span>
+      <span class="hbtn-label">読込</span>
+    </button>
+    <button onclick="driveSave()" class="hbtn" style="color:${c.accent};">
+      <span class="material-icons">cloud_upload</span>
+      <span class="hbtn-label">保存</span>
+    </button>`;
 }
 
 // ============================================================
