@@ -1541,10 +1541,17 @@ function driveButtonsHTML(c) {
 function buildChineseHTML(segIdx, text, markers) {
   const chars = [...text]; // Unicode文字単位で分割
   const marked = new Array(chars.length).fill(false);
-  // このセグメントのマーカーをすべて適用
+  // このセグメントのマーカーをstart/endで適用
   markers.forEach(m => {
     if (m.segIdx === segIdx) {
-      for (let i = m.start; i < m.end && i < chars.length; i++) marked[i] = true;
+      // textベースでも位置を確認（startが0の古いデータへの互換性）
+      let s = m.start, e = m.end;
+      if (m.text && (s === 0 && e > 0)) {
+        // 古い形式：textから位置を探す
+        const pos = [...text].join("").indexOf(m.text);
+        if (pos >= 0) { s = pos; e = pos + [...m.text].length; }
+      }
+      for (let i = s; i < e && i < chars.length; i++) marked[i] = true;
     }
   });
   let html = "";
@@ -1590,8 +1597,8 @@ function initLongPressMarker() {
     clearTimeout(_longPressTimer);
   }, { passive: true });
 
-  // PC用：長押し相当としてcontextmenu（右クリック）を使用
-  vc.addEventListener("contextmenu", e => {
+  // PC用：ダブルクリックで展開
+  vc.addEventListener("dblclick", e => {
     const seg = e.target.closest("[data-seg-idx]");
     if (!seg) return;
     e.preventDefault();
@@ -1669,38 +1676,34 @@ function expandSegment(segIdx) {
   const markedBd = "#d4b800";
   const normalBg = c.id==="night" ? c.input : c.header;
 
-  // ワードごとのセル（縦線区切り：border-rightで表現）
+  // ワードごとのセル（横並び・行間広め・マス目にならないよう）
   const cellsHTML = words.map((w, wi) => {
     const hasMarker = markers.some(m => m.segIdx===segIdx && m.text===w.text);
-    const isLast = wi === words.length - 1;
     return `<span id="wc-${segIdx}-${wi}"
       onclick="selectWord(${segIdx},${wi})"
       data-has-marker="${hasMarker}"
-      style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
-        padding:6px 8px;cursor:pointer;
-        background:${hasMarker ? markedBg : normalBg};
-        ${!isLast ? `border-right:1px solid ${c.bd};` : ""}">
+      style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+        padding:6px 10px 6px;cursor:pointer;border-radius:8px;margin:2px 3px;
+        background:${hasMarker ? markedBg : normalBg};">
       <span style="font-size:${s.ch}px;font-weight:700;color:${c.ch};">${esc(w.text)}</span>
-      <span style="font-size:${s.py}px;color:${c.py};">${w.pinyin}</span>
+      <span style="font-size:${s.py}px;color:${c.py};white-space:nowrap;">${w.pinyin}</span>
     </span>`;
   }).join("");
 
-  // 登録ボタン
+  // 登録ボタン（全幅）
   const regBtn = `<button id="word-reg-btn-${segIdx}" onclick="registerSelectedWords(${segIdx})"
-    style="display:none;background:#e8820a;border:none;border-radius:8px;
-      padding:6px 14px;font-size:13px;font-weight:700;color:#fff;
-      cursor:pointer;font-family:inherit;margin-left:8px;flex-shrink:0;">登録</button>`;
+    style="display:none;width:100%;background:#e8820a;border:none;border-radius:8px;
+      padding:10px;font-size:14px;font-weight:700;color:#fff;
+      cursor:pointer;font-family:inherit;margin-top:6px;">登録</button>`;
 
   // セグメントをボタン群に差し替え
   const wrapper = document.createElement("div");
   wrapper.id = "seg-expanded-" + segIdx;
   wrapper.dataset.segIdx = segIdx;
-  wrapper.style.cssText = `display:flex;align-items:center;flex-wrap:wrap;
-    row-gap:10px;column-gap:0;padding:8px 0;`;
-  // 1行分をまとめたコンテナ
+  wrapper.style.cssText = `display:flex;flex-direction:column;padding:6px 0 8px;`;
+  // 単語セルのエリア
   const row = document.createElement("div");
-  row.style.cssText = `display:inline-flex;flex-wrap:wrap;border:1px solid ${c.bd};
-    border-radius:10px;overflow:hidden;`;
+  row.style.cssText = `display:flex;flex-wrap:wrap;align-items:flex-start;`;
   row.innerHTML = cellsHTML;
   wrapper.appendChild(row);
   const regBtnEl = document.createElement("div");
@@ -1768,9 +1771,17 @@ function registerSelectedWords(segIdx) {
   const dup = n.markers.some(m => m.segIdx===segIdx && m.text===text);
   if (!dup) {
     const folder = folderOf(n);
+    // セグメント内での正しい文字位置を計算
+    const segText = n.segments[segIdx]?.chinese || "";
+    const charStart = [...segText].indexOf([..._segWords[sorted[0]]?.text||""][0]);
+    // sorted内の単語をつなげた文字列の開始位置
+    let charPos = 0;
+    for (let i = 0; i < sorted[0]; i++) {
+      charPos += [...(_segWords[i]?.text||"")].length;
+    }
     n.markers.push({
       id: Date.now(),
-      segIdx, start: 0, end: [...text].length,
+      segIdx, start: charPos, end: charPos + [...text].length,
       text, pinyin,
       noteId: n.id, noteTitle: n.title,
       folderTitle: folder ? folder.title : "",
@@ -1980,6 +1991,7 @@ function getAllMarkers() {
 
 function renderVocab(app) {
   const c = col(); const s = sz();
+  const vc = { ...c, header: c.vocabHeader, accent: c.vocabAccent, ui: c.vocabUi };
   const em = state.vocabEditMode;
   const markers = getAllMarkers();
   const today = new Date().toISOString().slice(0,10);
@@ -2012,7 +2024,9 @@ function renderVocab(app) {
             <div class="vocab-source" style="color:${c.ui};">${esc(source)}</div>
           </div>
           ${!em ? `<button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId})"
-            style="color:${c.ui};" title="本文へジャンプ">
+            style="color:${vc.accent};align-self:stretch;padding:0 14px;
+              border-left:1px solid ${c.bd};border-radius:0 12px 12px 0;
+              margin:-14px -16px -14px 0;" title="本文へジャンプ">
             <span class="material-icons" style="font-size:20px;">open_in_new</span>
           </button>` : ""}
         </div>`;
@@ -2027,22 +2041,27 @@ function renderVocab(app) {
   const rightBtns = em
     ? `<button onclick="deleteCheckedVocab()" style="background:#e05555;border:none;border-radius:8px;
         padding:6px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">削除</button>
-       <button onclick="cancelVocabEdit()" style="background:none;border:1px solid ${c.bd};border-radius:8px;
-        padding:6px 12px;font-size:13px;color:${c.ui};cursor:pointer;font-family:inherit;">完了</button>`
-    : hbtn("edit","編集","startVocabEdit()",c.ui) + hbtn("settings","設定","toggleSettings()",c.ui);
+       <button onclick="cancelVocabEdit()" style="background:none;border:1px solid ${vc.bd};border-radius:8px;
+        padding:6px 12px;font-size:13px;color:${vc.ui};cursor:pointer;font-family:inherit;">完了</button>`
+    : hbtn("edit","編集","startVocabEdit()",vc.ui) + hbtn("settings","設定","toggleSettings()",vc.ui);
 
+  // ヘッダー・フッターにvocabカラーを適用
+  document.body.style.background = c.bg;
   app.innerHTML = `
-    ${mkHeader("",
-      `<div class="header-main-title" style="color:${c.ch};">単語帳</div>`,
-      rightBtns
-    )}
-    ${!em ? `<div style="padding:8px 16px;font-size:12px;opacity:0.45;border-bottom:1px solid ${c.bd};">
+    <div class="header" style="background:${vc.header};border-color:${c.bd};">
+      <div style="flex-shrink:0;"></div>
+      <div class="header-title-area">
+        <div class="header-main-title" style="color:${vc.accent};">単語帳</div>
+      </div>
+      <div class="header-btns">${rightBtns}</div>
+    </div>
+    ${!em ? `<div style="padding:8px 16px;font-size:12px;opacity:0.45;border-bottom:1px solid ${c.bd};background:${vc.header};">
       <span class="material-icons" style="font-size:14px;vertical-align:middle;">open_in_new</span>
-      アイコンで本文へジャンプ
+      右端タップで本文へジャンプ
     </div>` : ""}
     ${settingsPanel()}
     <div class="vocab-grid">${gridHTML}</div>
-    ${bottomTabsHTML(c)}`;
+    ${bottomTabsHTML(c, vc)}`;
 }
 
 let _vocabChecked = new Set();
@@ -2083,20 +2102,23 @@ function initVocabSwipe() { /* スワイプ削除廃止 */ }
 // ============================================================
 // 下部タブ
 // ============================================================
-function bottomTabsHTML(c) {
+function bottomTabsHTML(c, vc) {
   const hasNotes = state.items.some(i => i.kind==="note");
   if (!hasNotes) return "";
   const isVocab = state.page === "vocab";
-  const isNote  = !isVocab;
-  return `<div id="bottom-tabs" style="background:${c.header};border-color:${c.bd};">
+  const vocabC  = vc || c;
+  const tabBg   = isVocab ? vocabC.header : c.header;
+  const noteCol  = isVocab ? (c.ui+"88") : c.accent;
+  const vocabCol = isVocab ? vocabC.accent : (c.ui+"88");
+  return `<div id="bottom-tabs" style="background:${tabBg};border-color:${c.bd};">
     <button class="tab-btn" onclick="goNoteTab()"
-      style="color:${isNote ? c.accent : c.ui};">
+      style="color:${noteCol};font-weight:${isVocab?"400":"700"};">
       <span class="material-icons">menu_book</span>
       <span>ノート</span>
     </button>
     <div class="tab-divider" style="background:${c.bd};"></div>
     <button class="tab-btn" onclick="goVocabTab()"
-      style="color:${isVocab ? c.accent : c.ui};">
+      style="color:${vocabCol};font-weight:${isVocab?"700":"400"};">
       <span class="material-icons">bookmarks</span>
       <span>単語帳</span>
     </button>
