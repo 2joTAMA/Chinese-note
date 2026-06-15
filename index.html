@@ -370,11 +370,19 @@ const COLORS = [
   { id:"night", label:"夜",
     bg:"#1c1c24", header:"#14141a", ch:"#f5f0e6", py:"#88c0a0",
     ui:"#a8a8b8", bd:"#2e2e3a", input:"#252530", accent:"#88c0a0",
-    childBg:"#18181f", childBd:"#3a3a50" },
+    childBg:"#18181f", childBd:"#3a3a50",
+    // 単語帳カラー（インディゴ系）
+    vocabBg:"#1a1a2e", vocabHeader:"#12121e",
+    vocabAccent:"#7a8fd4", vocabUi:"#9098c8", vocabCh:"#e8ecff",
+  },
   { id:"paper", label:"昼",
     bg:"#f5f0e8", header:"#ede5d8", ch:"#3a2d1e", py:"#7a6a4a",
     ui:"#5a4a3a", bd:"#ddd0bc", input:"#fdfaf5", accent:"#7a6a4a",
-    childBg:"#e8dfd0", childBd:"#c8b89a" },
+    childBg:"#e8dfd0", childBd:"#c8b89a",
+    // 単語帳カラー（ボルドー系）
+    vocabBg:"#f2ebe8", vocabHeader:"#e8dcd8",
+    vocabAccent:"#7a3a3a", vocabUi:"#6a2e2e", vocabCh:"#3a1818",
+  },
 ];
 const SIZES = [
   { label:"小", ch:17, py:12, lhCh:1.65, lhPy:1.4, mbPy:10, mbNoPy:16 },
@@ -2001,7 +2009,15 @@ function getAllMarkers() {
 
 function renderVocab(app) {
   const c = col(); const s = sz();
-  const vcol = { ...c, header: c.vocabHeader||c.header, accent: c.vocabAccent||c.accent, ui: c.vocabUi||c.ui };
+  const vcol = {
+    ...c,
+    bg:     c.vocabBg     || c.bg,
+    header: c.vocabHeader || c.header,
+    accent: c.vocabAccent || c.accent,
+    ui:     c.vocabUi     || c.ui,
+    ch:     c.vocabCh     || c.ch,
+    input:  c.vocabHeader || c.input,
+  };
   const em = state.vocabEditMode;
   const markers = getAllMarkers();
   const today = new Date().toISOString().slice(0,10);
@@ -2025,15 +2041,15 @@ function renderVocab(app) {
     groups[date].forEach(m => {
       const source = [m.folderTitle, m.noteTitle].filter(Boolean).join(" › ");
       gridHTML += `
-        <div class="vocab-card" style="background:${vcol.input};">
+        <div class="vocab-card" style="background:${vcol.input};border:1px solid ${c.bd};">
           ${em ? `<input type="checkbox" class="vocab-checkbox" id="chk-${m.id}"
             onchange="toggleVocabCheck(${m.id},this.checked)">` : ""}
           <div class="vocab-card-inner">
-            <div class="vocab-chinese" style="font-size:${s.ch}px;color:${c.ch};">${esc(m.text)}</div>
+            <div class="vocab-chinese" style="font-size:${s.ch}px;color:${vcol.ch};">${esc(m.text)}</div>
             ${state.showPinyin ? `<div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};">${m.pinyin||""}</div>` : ""}
-            <div class="vocab-source" style="color:${c.ui};">${esc(source)}</div>
+            <div class="vocab-source" style="color:${vcol.ui};">${esc(source)}</div>
           </div>
-          ${!em ? `<button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId})"
+          ${!em ? `<button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId},${m.segIdx})"
             style="color:${vcol.accent};align-self:stretch;padding:0 14px;
               border-left:1px solid ${c.bd};border-radius:0 12px 12px 0;
               margin:-14px -16px -14px 0;
@@ -2057,7 +2073,7 @@ function renderVocab(app) {
     : hbtn("edit","編集","startVocabEdit()",vcol.ui) + hbtn("settings","設定","toggleSettings()",vcol.ui);
 
   // ヘッダー・フッターにvocabカラーを適用
-  document.body.style.background = c.bg;
+  document.body.style.background = vcol.bg;
   app.innerHTML = `
     <div class="header" style="background:${vcol.header};border-color:${c.bd};">
       <div style="flex-shrink:0;"></div>
@@ -2091,11 +2107,22 @@ function deleteCheckedVocab() {
   render();
 }
 
-function jumpToNote(noteId) {
+function jumpToNote(noteId, segIdx) {
   state.currentNoteId = noteId;
   state.page = "view";
   state.markerMode = false;
+  state._jumpToSegIdx = (segIdx !== undefined) ? segIdx : null;
   render();
+  // renderView後にセグメント位置へスクロール
+  if (segIdx !== undefined) {
+    requestAnimationFrame(() => {
+      const el = document.getElementById("seg-" + segIdx);
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
+    });
+  }
 }
 
 function deleteMarkerById(markerId) {
@@ -2115,10 +2142,10 @@ function initVocabSwipe() { /* スワイプ削除廃止 */ }
 // ============================================================
 function bottomTabsHTML(c, vc) {
   const isVocab = state.page === "vocab";
-  const vocabC  = vc || c;
+  const vocabC  = vc || { ...c, header: c.vocabHeader||c.header, accent: c.vocabAccent||c.accent };
   const tabBg   = isVocab ? vocabC.header : c.header;
-  const noteCol  = isVocab ? (c.ui+"88") : c.accent;
-  const vocabCol = isVocab ? vocabC.accent : (c.ui+"88");
+  const noteCol  = isVocab ? (c.ui+"66") : c.accent;
+  const vocabCol = isVocab ? vocabC.accent : ((c.vocabAccent||c.accent)+"66");
   return `<div id="bottom-tabs" style="background:${tabBg};border-color:${c.bd};">
     <button class="tab-btn" onclick="goNoteTab()"
       style="color:${noteCol};font-weight:${isVocab?"400":"700"};">
