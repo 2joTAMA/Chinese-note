@@ -711,11 +711,13 @@ function folderRowHTML(folder, c, em) {
         <span class="folder-title" style="color:${c.ch};">${esc(folder.title)}</span>
         ${children.length > 0 ? `<span style="background:${c.accent};color:${c.bg};
           font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;
-          flex-shrink:0;margin-left:4px;">${children.length}</span>` : ""}
+          flex-shrink:0;margin-left:6px;">${children.length}</span>` : ""}
+        <span style="flex:1;"></span>
         ${!isOpen && children.some(n => n.bookmarkIdx !== null && n.bookmarkIdx !== undefined) ?
-          `<span class="material-icons bm-folder-icon" style="font-size:16px;color:#e8820a;flex-shrink:0;margin-left:6px;">bookmark</span>` : ""}
-        <span style="display:flex;align-items:center;opacity:0.7;margin-left:auto;">
-          <span class="material-icons" style="font-size:26px;transition:transform 0.4s;transform:rotate(${isOpen?180:0}deg);">
+          `<span class="material-icons bm-folder-icon" style="font-size:16px;color:#e8820a;flex-shrink:0;margin-right:4px;">bookmark</span>` : ""}
+        <span style="display:flex;align-items:center;opacity:0.7;">
+          <span class="material-icons folder-chevron" id="chevron-${folder.id}"
+            style="font-size:26px;transition:transform 0.4s;transform:rotate(${isOpen?180:0}deg);">
             expand_more</span>
         </span>
       </div>
@@ -1127,7 +1129,7 @@ function toggleFolder(id) {
   if(inner){
     const iconEl=inner.querySelector(".material-icons:first-child");
     if(iconEl) iconEl.textContent=f.open?"folder_open":"folder";
-    const chevron=inner.querySelector("span[style*='transition'] .material-icons");
+    const chevron=document.getElementById("chevron-"+id);
     if(chevron) chevron.style.transform=`rotate(${f.open?180:0}deg)`;
     // しおりマークの表示/非表示
     const bmIcon=inner.querySelector(".bm-folder-icon");
