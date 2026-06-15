@@ -261,10 +261,12 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none;
 }
-img {
+img:not(.tab-btn img) {
   -webkit-touch-callout: none;
   pointer-events: none;
 }
+#bottom-tabs { pointer-events: auto; }
+#bottom-tabs * { pointer-events: auto; }
 /* マーカーFAB */
 #marker-fab {
   position: fixed; bottom: 76px; right: 20px; z-index: 40;
@@ -2109,8 +2111,6 @@ function initVocabSwipe() { /* スワイプ削除廃止 */ }
 // 下部タブ
 // ============================================================
 function bottomTabsHTML(c, vc) {
-  const hasNotes = state.items.some(i => i.kind==="note");
-  if (!hasNotes) return "";
   const isVocab = state.page === "vocab";
   const vocabC  = vc || c;
   const tabBg   = isVocab ? vocabC.header : c.header;
