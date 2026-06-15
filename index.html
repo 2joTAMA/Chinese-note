@@ -298,7 +298,7 @@ img:not(.tab-btn img) {
 
 /* ===== 下部タブ ===== */
 #bottom-tabs {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
   display: flex; border-top-width: 1px; border-top-style: solid;
   height: 56px;
 }
@@ -687,7 +687,10 @@ function folderRowHTML(folder, c, em) {
         <span class="material-icons" style="color:${c.accent};font-size:22px;flex-shrink:0;">
           ${isOpen?"folder_open":"folder"}</span>
         <span class="folder-title" style="color:${c.ch};">${esc(folder.title)}</span>
-        <span style="display:flex;align-items:center;opacity:0.7;">
+        ${children.length > 0 ? `<span style="background:${c.accent};color:${c.bg};
+          font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;
+          flex-shrink:0;margin-left:4px;">${children.length}</span>` : ""}
+        <span style="display:flex;align-items:center;opacity:0.7;margin-left:auto;">
           <span class="material-icons" style="font-size:26px;transition:transform 0.4s;transform:rotate(${isOpen?0:-90}deg);">
             expand_more</span>
         </span>
@@ -2161,7 +2164,18 @@ function boot() {
   state.sizeIdx   = def.sizeIdx;
   state.colorIdx  = def.colorIdx;
   state.showPinyin= def.showPinyin;
+  // フォルダのデフォルト開閉をしおりで決定
+  updateFolderOpenState();
   render();
+}
+
+function updateFolderOpenState() {
+  state.items.forEach(item => {
+    if (item.kind !== "folder") return;
+    const children = state.items.filter(i => i.kind==="note" && i.folderId===item.id);
+    const hasBookmark = children.some(n => n.bookmarkIdx !== null && n.bookmarkIdx !== undefined);
+    item.open = hasBookmark;
+  });
 }
 function waitAndBoot(){
   if(window.pinyinPro&&window.pinyinPro.pinyin)boot();
