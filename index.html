@@ -124,7 +124,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 
 /* しおりジャンプボタン（右側縦書き） */
 #bm-jump {
-  position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+  position: fixed; right: 0; top: 80px;
   writing-mode: vertical-rl; text-orientation: mixed;
   font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
   padding: 12px 4px; border-radius: 8px 0 0 8px;
@@ -247,23 +247,32 @@ function defaultSizeIdx() { return window.innerWidth < 768 ? 0 : 1; }
 // ============================================================
 const DELIMITERS_SPLIT = /([。！？!?]+)/;
 const DELIMITERS_TEST  = /^[。！？!?]+$/;
-// 全角・半角の閉じクォート・括弧すべて
-const CLOSE_CHARS = /^["""」』】〕)）\u201d\u2019]/;
 
 function buildSegments(raw, oldSegments) {
   const oldMap = {};
   (oldSegments||[]).forEach(s => { oldMap[s.chinese] = s.pinyin; });
   const segments = [];
+  // 閉じクォート・括弧マッチ（全角半角対応）
+  const closeRe = /^[\u0022\u0027\u201c\u201d\u2018\u2019"""''」』】〕)）]+/;
   raw.split(/\n/).forEach(block => {
     block = block.trim(); if (!block) return;
     const parts = block.split(DELIMITERS_SPLIT);
     let buf = "";
     for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]; if (!part) continue;
+      const part = parts[i];
+      if (part === undefined || part === "") continue;
       if (DELIMITERS_TEST.test(part)) {
         buf += part;
-        // 閉じクォート・括弧を連続して吸収
-        while (i+1 < parts.length && CLOSE_CHARS.test(parts[i+1])) { i++; buf += parts[i]; }
+        // 直後のパーツが閉じクォート類で始まる場合は吸収
+        if (i+1 < parts.length && parts[i+1]) {
+          const m = parts[i+1].match(closeRe);
+          if (m) {
+            buf += m[0];
+            const rest = parts[i+1].slice(m[0].length);
+            if (rest === "") { i++; }
+            else { parts[i+1] = rest; }
+          }
+        }
         const text = buf.trim();
         if (text) segments.push({ chinese:text, pinyin:oldMap[text]||getPy(text) });
         buf = "";
@@ -616,8 +625,9 @@ function renderView(app) {
     rightBtns = `
       <button onclick="saveBookmark()" style="background:#e8820a;border:none;border-radius:8px;
         padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>
-      <button onclick="cancelBookmark()" class="cancel-btn"
-        style="color:${c.ui};border-color:${c.bd};background:${c.input};">取消</button>`;
+      <div style="width:12px;flex-shrink:0;"></div>
+      <button onclick="deleteBookmark()" class="cancel-btn"
+        style="color:#e05555;border-color:#e05555;background:${c.input};font-size:11px;">しおりを削除して終了</button>`;
   } else {
     rightBtns =
       hbtn("bookmark","しおり","startBookmarkMode()",c.ui) +
@@ -645,7 +655,8 @@ function renderView(app) {
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
-    ${jumpBtn}`;
+    ${jumpBtn}
+    ${!bm ? siblingNavHTML(n, c, s) : ""}`;
 
   if (bm) {
     const vc = document.getElementById("view-content");
@@ -673,12 +684,55 @@ function jumpToBookmark(smooth=true) {
 }
 
 // ============================================================
+// 前後ノートナビ
+// ============================================================
+function siblingNavHTML(n, c, s) {
+  if (!n.folderId) return ""; // フォルダに属していない場合は表示しない
+  const siblings = state.items.filter(i => i.kind==="note" && i.folderId===n.folderId);
+  if (siblings.length <= 1) return ""; // 1つだけなら表示しない
+  const idx = siblings.findIndex(i => i.id===n.id);
+  const prev = idx > 0 ? siblings[idx-1] : null;
+  const next = idx < siblings.length-1 ? siblings[idx+1] : null;
+
+  const btnStyle = `background:none;border:1px solid ${c.bd};border-radius:10px;
+    padding:10px 14px;cursor:pointer;font-family:inherit;color:${c.ui};
+    display:flex;flex-direction:column;gap:4px;max-width:45%;`;
+  const labelStyle = `font-size:11px;opacity:0.55;`;
+  const titleStyle = `font-size:13px;font-weight:600;color:${c.ch};
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;`;
+  const emptyStyle = `font-size:11px;opacity:0.35;max-width:45%;padding:10px 0;`;
+
+  const prevHTML = prev
+    ? `<button onclick="openNote(${prev.id})" style="${btnStyle}text-align:left;">
+        <span style="${labelStyle}">‹ 前のノート</span>
+        <span style="${titleStyle}">${esc(prev.title)}</span>
+       </button>`
+    : `<span style="${emptyStyle}">最初のノートです</span>`;
+
+  const nextHTML = next
+    ? `<button onclick="openNote(${next.id})" style="${btnStyle}text-align:right;align-items:flex-end;">
+        <span style="${labelStyle}">次のノート ›</span>
+        <span style="${titleStyle}">${esc(next.title)}</span>
+       </button>`
+    : `<span style="${emptyStyle};text-align:right;">最後のノートです</span>`;
+
+  return `<div style="display:flex;justify-content:space-between;align-items:center;
+    padding:20px 20px 40px;border-top:1px solid ${c.bd};margin-top:10px;">
+    ${prevHTML}
+    ${nextHTML}
+  </div>`;
+}
+
+// ============================================================
 // BOOKMARK
 // ============================================================
 function startBookmarkMode() {
+  state._bmScrollY = window.scrollY; // スクロール位置を記録
   state.bookmarkMode = true;
   state.bookmarkPreview = note()?.bookmarkIdx ?? null;
   render();
+  // render後にスクロール位置を復元（ずれを防ぐ）
+  requestAnimationFrame(() => { window.scrollTo(0, state._bmScrollY||0); });
 }
 function selectBookmarkGap(idx) {
   state.bookmarkPreview = (state.bookmarkPreview === idx) ? null : idx;
@@ -694,10 +748,20 @@ function saveBookmark() {
   markUnsaved();
   render();
   showToast(n.bookmarkIdx !== null ? "しおりを保存しました" : "しおりを解除しました");
+  requestAnimationFrame(() => { window.scrollTo(0, state._bmScrollY||0); });
 }
 function cancelBookmark() {
   state.bookmarkMode = false; state.bookmarkPreview = null;
   render();
+  requestAnimationFrame(() => { window.scrollTo(0, state._bmScrollY||0); });
+}
+function deleteBookmark() {
+  const n = note(); if (!n) return;
+  n.bookmarkIdx = null;
+  state.bookmarkMode = false; state.bookmarkPreview = null;
+  markUnsaved();
+  render();
+  showToast("しおりを削除しました");
 }
 
 // ============================================================
@@ -747,8 +811,8 @@ function toggleListEdit() { state.listEditMode=!state.listEditMode; render(); }
 function toggleFolder(id) {
   const f=state.items.find(i=>i.id===id); if(!f)return;
   f.open=!f.open;
-  const el=document.getElementById("children-"+id); const c=col();
-  if(el){ el.classList.toggle("open",f.open); el.style.borderBottom=f.open?`1px solid ${c.bd}`:""; }
+  const c=col();
+  // アイコン・矢印を先に更新（アニメーションと同時にする）
   const inner=document.getElementById("inner-"+id);
   if(inner){
     const iconEl=inner.querySelector(".material-icons:first-child");
@@ -756,6 +820,8 @@ function toggleFolder(id) {
     const chevron=inner.querySelector("span[style*='transition'] .material-icons");
     if(chevron) chevron.style.transform=`rotate(${f.open?0:-90}deg)`;
   }
+  const el=document.getElementById("children-"+id);
+  if(el){ el.classList.toggle("open",f.open); el.style.borderBottom=f.open?`1px solid ${c.bd}`:""; }
 }
 
 function openNote(id) {
@@ -831,6 +897,7 @@ function confirmNewNote() {
     segments:buildSegments(body,[]), folderId, bookmarkIdx:null });
   markUnsaved();
   closeNewNoteModal();
+  showToast("ノートを作成しました");
   // 作成したノートを即座に開く
   state.currentNoteId=id; state.page="view"; render();
 }
