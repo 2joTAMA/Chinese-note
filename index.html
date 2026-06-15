@@ -156,7 +156,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 
 /* しおり編集 */
 #view-content { transition: opacity 0.25s; }
-#view-content.bm-mode { opacity: 0.3; }
+#view-content.bm-mode .line-pinyin { opacity: 0.25; }
 /* ギャップはheight:0でレイアウトに影響なし、absoluteで点線を表示 */
 .bm-gap {
   display: none; width: 100%; cursor: pointer;
@@ -178,8 +178,7 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 #bm-banner {
   display: none; position: sticky; top: 52px; z-index: 9;
   padding: 8px 16px; font-size: 13px; font-weight: 600; text-align: center;
-  background: rgba(232,130,10,0.18); color: #e8820a;
-  border-bottom: 1px solid rgba(232,130,10,0.3);
+  border-bottom: 1px solid rgba(232,130,10,0.5);
 }
 #bm-banner.visible { display: block; }
 
@@ -743,11 +742,10 @@ function renderView(app) {
     ${mkHeader(
       `<button class="hbtn" onclick="goList()" style="color:${c.py};">
         <span class="material-icons">arrow_back_ios</span>
-        <span class="hbtn-label">一覧</span>
       </button>`,
       titleArea, rightBtns
     )}
-    <div id="bm-banner" class="${bm?"visible":""}">行間の点線をタップしてしおりの位置を選んでください</div>
+    <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
     ${settingsPanel()}
     <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 120px;">
       ${linesHTML}
@@ -760,11 +758,11 @@ function renderView(app) {
       opacity:0.6;margin-top:0;"></div>` : ""}
     ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
-        style="background:${c.header};color:${c.ui};border:1px solid ${c.bd};">
+        style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
         <span class="material-icons" style="font-size:20px;">keyboard_arrow_up</span>
       </button>
       <button class="scroll-btn visible" id="scroll-bot-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})"
-        style="background:${c.header};color:${c.ui};border:1px solid ${c.bd};">
+        style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
         <span class="material-icons" style="font-size:20px;">keyboard_arrow_down</span>
       </button>
     </div>` : ""}`;
@@ -826,34 +824,46 @@ function siblingNavHTML(n, c, s) {
   const navBgHov = c.id === "night" ? "rgba(136,192,160,0.3)"  : "#c8b490";
   const navText = c.id === "night" ? c.py : "#5a3e20";
 
-  const btnBase = `width:calc(50% - 6px);border-radius:12px;padding:12px 14px;cursor:pointer;
-    font-family:inherit;display:flex;flex-direction:column;gap:5px;border:none;
+  const btnBase = `width:calc(50% - 6px);border-radius:12px;padding:14px 16px;cursor:pointer;
+    font-family:inherit;display:flex;align-items:center;gap:12px;border:none;
     background:${navBg};`;
-  const labelStyle = `font-size:11px;font-weight:600;letter-spacing:0.03em;color:${navText};opacity:0.8;`;
-  const titleStyle = `font-size:13px;font-weight:700;color:${c.ch};
+  const titleStyle = `font-size:15px;font-weight:700;color:${c.ch};flex:1;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
-  const folderStyle = `font-size:10px;opacity:0.45;color:${c.ui};`;
+  const folderStyle = `font-size:11px;font-weight:500;color:${navText};
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;`;
+  const iconStyle = `font-size:28px;color:${navText};flex-shrink:0;`;
   const emptyStyle = `width:calc(50% - 6px);font-size:11px;opacity:0.3;color:${c.ui};
     display:flex;align-items:center;padding:0 4px;`;
 
   const prevHTML = prev
-    ? `<button onclick="openNote(${prev.id})" style="${btnBase}text-align:left;">
-        <span style="${labelStyle}">‹ 前のノート</span>
-        <span style="${titleStyle}">${esc(prev.title)}</span>
-        <span style="${folderStyle}">${folderName}</span>
+    ? `<button onclick="openNote(${prev.id})" style="${btnBase}justify-content:flex-start;">
+        <span class="material-icons" style="${iconStyle}">chevron_left</span>
+        <div style="flex:1;min-width:0;text-align:left;">
+          <div style="${titleStyle}">${esc(prev.title)}</div>
+          <div style="${folderStyle}">${folderName}</div>
+        </div>
        </button>`
     : `<span style="${emptyStyle}">最初のノートです</span>`;
 
   const nextHTML = next
-    ? `<button onclick="openNote(${next.id})" style="${btnBase}text-align:right;align-items:flex-end;">
-        <span style="${labelStyle}">次のノート ›</span>
-        <span style="${titleStyle}">${esc(next.title)}</span>
-        <span style="${folderStyle}">${folderName}</span>
+    ? `<button onclick="openNote(${next.id})" style="${btnBase}justify-content:flex-end;">
+        <div style="flex:1;min-width:0;text-align:right;">
+          <div style="${titleStyle}">${esc(next.title)}</div>
+          <div style="${folderStyle}">${folderName}</div>
+        </div>
+        <span class="material-icons" style="${iconStyle}">chevron_right</span>
        </button>`
     : `<span style="${emptyStyle}justify-content:flex-end;">最後のノートです</span>`;
 
-  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
-      padding:24px 20px 48px;border-top:1px solid ${c.bd};margin-top:16px;">
+  const endImg = `<div style="width:100%;line-height:0;margin-bottom:-2px;">
+    <img src="images/end-of-note.png"
+      style="width:100%;height:auto;display:block;"
+      onerror="this.style.display='none'">
+  </div>`;
+
+  return `${endImg}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:24px 20px 48px;border-top:1px solid ${c.bd};">
       ${prevHTML}
       ${nextHTML}
     </div>`;
@@ -863,12 +873,16 @@ function siblingNavHTML(n, c, s) {
 // BOOKMARK
 // ============================================================
 function startBookmarkMode() {
-  state._bmScrollY = window.scrollY; // スクロール位置を記録
+  state._bmScrollY = window.scrollY;
   state.bookmarkMode = true;
   state.bookmarkPreview = note()?.bookmarkIdx ?? null;
   render();
-  // render後にスクロール位置を復元（ずれを防ぐ）
-  requestAnimationFrame(() => { window.scrollTo(0, state._bmScrollY||0); });
+  // バナー分（約37px）を加算してズレを補正
+  requestAnimationFrame(() => {
+    const banner = document.getElementById("bm-banner");
+    const bannerH = banner ? banner.offsetHeight : 37;
+    window.scrollTo(0, (state._bmScrollY||0) + bannerH);
+  });
 }
 function selectBookmarkGap(idx) {
   state.bookmarkPreview = (state.bookmarkPreview === idx) ? null : idx;
@@ -886,10 +900,13 @@ function saveBookmark() {
   showToast(n.bookmarkIdx !== null ? "しおりを保存しました" : "しおりを解除しました");
   requestAnimationFrame(() => { window.scrollTo(0, state._bmScrollY||0); });
 }
+function _restoreScrollAfterBm() {
+  requestAnimationFrame(() => { window.scrollTo(0, state._bmScrollY||0); });
+}
 function cancelBookmark() {
   state.bookmarkMode = false; state.bookmarkPreview = null;
   render();
-  requestAnimationFrame(() => { window.scrollTo(0, state._bmScrollY||0); });
+  _restoreScrollAfterBm();
 }
 function deleteBookmark() {
   const n = note(); if (!n) return;
@@ -898,6 +915,7 @@ function deleteBookmark() {
   markUnsaved();
   render();
   showToast("しおりを削除しました");
+  _restoreScrollAfterBm();
 }
 
 // ============================================================
