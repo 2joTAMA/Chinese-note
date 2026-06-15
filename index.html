@@ -888,7 +888,10 @@ function renderView(app) {
     : `<div class="header-main-title" style="color:${c.ch};">${esc(n.title)}</div>`;
 
   let rightBtns = "";
-  if (bm) {
+  if (state.wordRegMode) {
+    rightBtns = `<button onclick="cancelWordRegMode()" class="cancel-btn"
+      style="color:${c.ui};border-color:${c.bd};background:${c.input};">保存せず戻る</button>`;
+  } else if (bm) {
     rightBtns = `
       <button onclick="deleteBookmark()" class="cancel-btn"
         style="color:#e05555;border-color:#e05555;background:${c.input};font-size:11px;">しおりを削除して終了</button>
@@ -900,7 +903,8 @@ function renderView(app) {
       (state.unsaved ? driveButtonsHTML(c) : "") +
       hbtn("edit","編集","goEdit()",c.ui) +
       hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
-      hbtn("draw","単語登録","toggleWordRegMode()", state.wordRegMode ? "#f5d000" : c.ui);
+      hbtn("draw","単語登録","toggleWordRegMode()", c.ui) +
+      hbtn("settings","設定","toggleSettings()",c.ui);
   }
 
   // しおりジャンプボタン
@@ -917,17 +921,19 @@ function renderView(app) {
       titleArea, rightBtns
     )}
     <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
+    <div id="wr-banner" class="${state.wordRegMode?"visible":""}"
+      style="display:${state.wordRegMode?"block":"none"};position:sticky;top:52px;z-index:9;
+        padding:8px 16px;font-size:13px;font-weight:600;text-align:center;
+        background:#3a3000;color:#f5d000;border-bottom:1px solid rgba(245,208,0,0.3);">
+      単語帳に登録する言葉を選択して「登録」を押してください
+    </div>
     ${settingsPanel()}
-    <div id="view-content" class="${bm?"bm-mode":""} ${state.wordRegMode?"word-reg-mode":""}" style="padding:20px 20px 30px;">
+    <div id="view-content" class="${bm?"bm-mode":""} ${(!bm&&state.wordRegMode)?"word-reg-mode":""}" style="padding:20px 20px 30px;">
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
     ${jumpBtn}
-    ${!bm ? `<button id="settings-side-btn" onclick="toggleSettings()"
-      style="background:${c.header};color:${c.ui};">
-      <span class="material-icons" style="font-size:16px;writing-mode:horizontal-tb;">settings</span>
-      <span>設定</span>
-    </button>` : ""}
+
     ${!bm ? siblingNavHTML(n, c, s) : ""}
     ${!bm ? `<div style="width:100%;line-height:0;">
       <img src="images/end-of-note.png"
@@ -1111,7 +1117,7 @@ function renderEdit(app) {
   app.innerHTML = `
     ${mkHeader(
       `<button class="cancel-btn" onclick="cancelEdit()"
-        style="color:${c.ui};border-color:${c.bd};background:${c.input};">保存せず終了</button>`,
+        style="color:${c.ui};border-color:${c.bd};background:${c.input};">保存せず戻る</button>`,
       `<div style="padding:0 4px;"></div>`,
       `<button onclick="saveEdit()" style="background:${c.accent};border:none;border-radius:8px;
         padding:7px 16px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`
@@ -1648,7 +1654,14 @@ function startMarkerMode() { /* 廃止 */ }
 function toggleWordRegMode() {
   const sy = window.scrollY;
   state.wordRegMode = !state.wordRegMode;
+  if (!state.wordRegMode && _expandedSegIdx !== null) collapseSegment();
+  render();
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+}
+function cancelWordRegMode() {
+  const sy = window.scrollY;
   if (_expandedSegIdx !== null) collapseSegment();
+  state.wordRegMode = false;
   render();
   requestAnimationFrame(() => window.scrollTo(0, sy));
 }
@@ -1665,22 +1678,8 @@ function initLongPressMarker() {
   let _longPressTimer = null;
   let _longPressTarget = null;
 
-  vc.addEventListener("touchstart", e => {
-    const seg = e.target.closest("[data-seg-idx]");
-    if (!seg) return;
-    _longPressTarget = seg;
-    _longPressTimer = setTimeout(() => {
-      if (!state.wordRegMode) return; // 単語登録モード外では無効
-      const idx = parseInt(seg.dataset.segIdx);
-      expandSegment(idx);
-    }, 500);
-  }, { passive: true });
-
+  // 長押しは使わない（タップで展開、通常のコピー・翻訳を妨げない）
   vc.addEventListener("touchend", () => {
-    clearTimeout(_longPressTimer);
-  }, { passive: true });
-
-  vc.addEventListener("touchmove", () => {
     clearTimeout(_longPressTimer);
   }, { passive: true });
 
@@ -1901,6 +1900,13 @@ function registerSelectedWords(segIdx) {
 
   // 展開を閉じてセグメントを元に戻す
   collapseSegment();
+  // 単語登録モードを解除
+  if (state.wordRegMode) {
+    const sy = window.scrollY;
+    state.wordRegMode = false;
+    render();
+    requestAnimationFrame(() => window.scrollTo(0, sy));
+  }
 }
 
 function collapseSegment() {
