@@ -712,8 +712,10 @@ function folderRowHTML(folder, c, em) {
         ${children.length > 0 ? `<span style="background:${c.accent};color:${c.bg};
           font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;
           flex-shrink:0;margin-left:4px;">${children.length}</span>` : ""}
+        ${!isOpen && children.some(n => n.bookmarkIdx !== null && n.bookmarkIdx !== undefined) ?
+          `<span class="material-icons bm-folder-icon" style="font-size:16px;color:#e8820a;flex-shrink:0;margin-left:6px;">bookmark</span>` : ""}
         <span style="display:flex;align-items:center;opacity:0.7;margin-left:auto;">
-          <span class="material-icons" style="font-size:26px;transition:transform 0.4s;transform:rotate(${isOpen?0:-90}deg);">
+          <span class="material-icons" style="font-size:26px;transition:transform 0.4s;transform:rotate(${isOpen?180:0}deg);">
             expand_more</span>
         </span>
       </div>
@@ -869,6 +871,7 @@ function renderView(app) {
         padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`;
   } else {
     rightBtns =
+      (state.unsaved ? driveButtonsHTML(c) : "") +
       hbtn("edit","編集","goEdit()",c.ui) +
       hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
       hbtn("settings","設定","toggleSettings()",c.ui);
@@ -1120,13 +1123,15 @@ function toggleFolder(id) {
   const f=state.items.find(i=>i.id===id); if(!f)return;
   f.open=!f.open;
   const c=col();
-  // アイコン・矢印を先に更新（アニメーションと同時にする）
   const inner=document.getElementById("inner-"+id);
   if(inner){
     const iconEl=inner.querySelector(".material-icons:first-child");
     if(iconEl) iconEl.textContent=f.open?"folder_open":"folder";
     const chevron=inner.querySelector("span[style*='transition'] .material-icons");
-    if(chevron) chevron.style.transform=`rotate(${f.open?0:-90}deg)`;
+    if(chevron) chevron.style.transform=`rotate(${f.open?180:0}deg)`;
+    // しおりマークの表示/非表示
+    const bmIcon=inner.querySelector(".bm-folder-icon");
+    if(bmIcon) bmIcon.style.display=f.open?"none":"";
   }
   const el=document.getElementById("children-"+id);
   if(el){ el.classList.toggle("open",f.open); el.style.borderBottom=f.open?`1px solid ${c.bd}`:""; }
@@ -2218,11 +2223,9 @@ function boot() {
 }
 
 function updateFolderOpenState() {
+  // 読み込み時はすべて閉じた状態にする
   state.items.forEach(item => {
-    if (item.kind !== "folder") return;
-    const children = state.items.filter(i => i.kind==="note" && i.folderId===item.id);
-    const hasBookmark = children.some(n => n.bookmarkIdx !== null && n.bookmarkIdx !== undefined);
-    item.open = hasBookmark;
+    if (item.kind === "folder") item.open = false;
   });
 }
 function waitAndBoot(){
