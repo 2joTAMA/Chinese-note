@@ -48,10 +48,11 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 
 /* 設定パネル */
 #settings-panel {
-  position: fixed; top: 52px; left: 0; right: 0; z-index: 100;
-  border-radius: 0 0 16px 16px; padding: 16px 20px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-  border-top: none !important;
+  position: fixed; top: 52px; right: 0; z-index: 100;
+  min-width: 230px; max-width: 280px;
+  border-radius: 0 0 0 16px; padding: 16px 18px;
+  box-shadow: -4px 6px 20px rgba(0,0,0,0.18);
+  border-top: none !important; border-right: none !important;
 }
 #settings-overlay {
   position: fixed; inset: 0; top: 52px; z-index: 99;
@@ -622,6 +623,7 @@ function childNoteRowHTML(n, c, em) {
       <div class="child-note-inner" id="inner-${n.id}" onclick="openNote(${n.id})"
         draggable="true" ondragstart="dragStart(event,${n.id})" ondragend="dragEnd(event)">
         <span class="child-title" style="color:${c.ch};">${esc(n.title)}</span>
+        ${n.bookmarkIdx!=null?`<span class="material-icons" style="font-size:16px;color:#e8820a;flex-shrink:0;">bookmark</span>`:""}
       </div>
       <div class="swipe-actions" id="swipe-actions-${n.id}">
         <button class="swipe-btn" style="background:#5b8fd4;" onclick="openMoveModal(${n.id})">移動</button>
@@ -647,6 +649,7 @@ function topNoteRowHTML(n, c, em) {
       <div class="top-note-inner" id="inner-${n.id}" onclick="openNote(${n.id})"
         draggable="true" ondragstart="dragStart(event,${n.id})" ondragend="dragEnd(event)">
         <span class="top-title" style="color:${c.ch};">${esc(n.title)}</span>
+        ${n.bookmarkIdx!=null?`<span class="material-icons" style="font-size:16px;color:#e8820a;flex-shrink:0;margin-right:4px;">bookmark</span>`:""}
         <span style="display:flex;align-items:center;opacity:0.55;">
           <span class="material-icons" style="font-size:22px;">chevron_right</span>
         </span>
@@ -747,7 +750,7 @@ function renderView(app) {
     )}
     <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
     ${settingsPanel()}
-    <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 120px;">
+    <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 20px;">
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
@@ -893,6 +896,14 @@ function selectBookmarkGap(idx) {
 }
 function saveBookmark() {
   const n = note(); if (!n) return;
+  // 同フォルダ内の他ノートのしおりをクリア
+  if (state.bookmarkPreview !== null && n.folderId) {
+    state.items.forEach(item => {
+      if (item.kind==="note" && item.folderId===n.folderId && item.id!==n.id) {
+        item.bookmarkIdx = null;
+      }
+    });
+  }
   n.bookmarkIdx = state.bookmarkPreview;
   state.bookmarkMode = false; state.bookmarkPreview = null;
   markUnsaved();
