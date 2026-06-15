@@ -2056,7 +2056,7 @@ function renderVocab(app) {
         padding:6px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">削除</button>
        <button onclick="cancelVocabEdit()" style="background:none;border:1px solid ${vcol.bd};border-radius:8px;
         padding:6px 12px;font-size:13px;color:${vcol.ui};cursor:pointer;font-family:inherit;">完了</button>`
-    : hbtn("edit","編集","startVocabEdit()",vc.ui) + hbtn("settings","設定","toggleSettings()",vc.ui);
+    : hbtn("edit","編集","startVocabEdit()",vcol.ui) + hbtn("settings","設定","toggleSettings()",vcol.ui);
 
   // ヘッダー・フッターにvocabカラーを適用
   document.body.style.background = c.bg;
