@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国語ノート</title>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; transition: background 0.3s; }
+  .line-chinese { font-weight: 700; line-height: 1.5; letter-spacing: 0.04em; }
+  .line-pinyin  { line-height: 1.4; letter-spacing: 0.06em; margin-bottom: 12px; }
+  .doc-item {
+    padding: 16px 20px; border-bottom-width: 1px; border-bottom-style: solid;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+  }
+  .doc-title { font-size: 16px; font-weight: 600; }
+  .btn { border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .fab {
+    position: fixed; bottom: 28px; right: 24px; width: 52px; height: 52px;
+    border-radius: 50%; color: #fff; font-size: 28px; border: none; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center;
+  }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); align-items: flex-end; z-index: 20;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box { width: 100%; border-radius: 20px 20px 0 0; padding: 24px 20px 40px; }
+  #settings-panel {
+    position: fixed; top: 52px; right: 16px; z-index: 30;
+    border-radius: 12px; padding: 14px 16px; min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .setting-row:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// =====================
+// 定数
+// =====================
+const FONTS = [
+  { label: "ゴシック",   value: "'Hiragino Sans','Noto Sans SC',sans-serif" },
+  { label: "明朝",       value: "'Hiragino Mincho ProN','Noto Serif SC',serif" },
+  { label: "丸ゴシック", value: "'Hiragino Maru Gothic ProN',sans-serif" },
+];
+const SIZES = [
+  { label: "小", ch: 17, py: 12 },
+  { label: "中", ch: 22, py: 14 },
+  { label: "大", ch: 28, py: 17 },
+];
+const COLORS = [
+  { label: "夜", bg: "#1a1a2e", header: "#16213e", ch: "#e8c4a0", py: "#a0b4d4", ui: "#c8c8c8", bd: "#2d2d4e", input: "#0f3460" },
+  { label: "昼", bg: "#fdfaf5", header: "#f0ebe0", ch: "#2d3a2e", py: "#5b7fa6", ui: "#555",    bd: "#e0d8cc", input: "#fff" },
+  { label: "紙", bg: "#f5f0e8", header: "#ede5d8", ch: "#3a2d1e", py: "#7a6a4a", ui: "#5a4a3a", bd: "#ddd0bc", input: "#fdfaf5" },
+];
+
+// 句点として扱う文字（splitに使う版とtestに使う版を分ける）
+const DELIMITERS_SPLIT = /([。！？!?]+)/;
+const DELIMITERS_TEST  = /^[。！？!?]+$/;
+
+// =====================
+// STATE
+// =====================
+let state = {
+  page: "list",
+  docs: [
+    {
+      id: 1,
+      title: "はじめての中国語",
+      // segmentsは表示用：{ chinese, pinyin }の配列
+      segments: [],
+      // rawは編集用の生テキスト
+      raw: "你好，我叫小明。今天天气很好。\n我喜欢学习中文。",
+    },
+  ],
+  currentDocId: null,
+  fontIdx: 0, sizeIdx: 1, colorIdx: 0,
+  showSettings: false,
+  editText: "",
+  nextId: 10,
+};
+
+const c  = () => COLORS[state.colorIdx];
+const sz = () => SIZES[state.sizeIdx];
+const ft = () => FONTS[state.fontIdx];
+const currentDoc = () => state.docs.find(d => d.id === state.currentDocId);
+
+// =====================
+// テキスト → セグメント分割
+// =====================
+// 改行と句点で分割し、各セグメントにピンインを付ける
+// oldSegments: 既存セグメント（差分更新用）
+function buildSegments(raw, oldSegments) {
+  const oldMap = {};
+  (oldSegments || []).forEach(s => { oldMap[s.chinese] = s.pinyin; });
+
+  const segments = [];
+
+  // まず改行で分割
+  const lineBlocks = raw.split(/\n/);
+
+  lineBlocks.forEach(block => {
+    block = block.trim();
+    if (!block) return;
+
+    // 句点で分割（句点を末尾に保持）
+    const parts = block.split(DELIMITERS_SPLIT);
+    let buf = "";
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!part) continue;
+      if (DELIMITERS_TEST.test(part)) {
+        // 句点：直前のbufに付けてセグメント確定
+        buf += part;
+        const text = buf.trim();
+        if (text) {
+          segments.push({
+            chinese: text,
+            pinyin: oldMap[text] || getPinyinText(text),
+          });
+        }
+        buf = "";
+      } else {
+        buf += part;
+      }
+    }
+    // 句点なしで残ったもの（改行区切りの場合）
+    const text = buf.trim();
+    if (text) {
+      segments.push({
+        chinese: text,
+        pinyin: oldMap[text] || getPinyinText(text),
+      });
+    }
+  });
+
+  return segments;
+}
+
+function getPinyinText(text) {
+  if (window.pinyinPro && window.pinyinPro.pinyin) {
+    return window.pinyinPro.pinyin(text, { toneType: "symbol", separator: " " });
+  }
+  return "";
+}
+
+// =====================
+// RENDER
+// =====================
+function render() {
+  const col = c();
+  document.body.style.background = col.bg;
+  document.body.style.fontFamily = ft().value;
+  document.body.style.color = col.ui;
+  const app = document.getElementById("app");
+  if (state.page === "list")      renderList(app, col);
+  else if (state.page === "view") renderView(app, col);
+  else if (state.page === "edit") renderEdit(app, col);
+}
+
+function headerHTML(col, leftHTML, title, rightHTML) {
+  return `
+    <div style="position:sticky;top:0;z-index:10;background:${col.header};
+      border-bottom:1px solid ${col.bd};padding:12px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div style="min-width:70px;">${leftHTML}</div>
+      <div style="font-size:15px;font-weight:700;color:${col.ch};text-align:center;flex:1;
+        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</div>
+      <div style="min-width:70px;display:flex;justify-content:flex-end;">${rightHTML}</div>
+    </div>`;
+}
+
+function iconBtnHTML(col, label, onclick) {
+  return `<button onclick="${onclick}" style="background:none;border:1px solid ${col.bd};
+    border-radius:8px;padding:5px 10px;font-size:12px;color:${col.ui};cursor:pointer;">${label}</button>`;
+}
+
+function settingsPanelHTML(col) {
+  if (!state.showSettings) return "";
+  return `
+    <div id="settings-panel" style="background:${col.header};border:1px solid ${col.bd};">
+      ${[
+        { label:"フォント", opts:FONTS,  idx:state.fontIdx,  fn:"cycleFont()"  },
+        { label:"サイズ",   opts:SIZES,  idx:state.sizeIdx,  fn:"cycleSize()"  },
+        { label:"カラー",   opts:COLORS, idx:state.colorIdx, fn:"cycleColor()" },
+      ].map(r => `
+        <div class="setting-row">
+          <span style="font-size:12px;">${r.label}</span>
+          <button onclick="${r.fn}" style="background:${col.bd}66;border:1px solid ${col.bd};
+            border-radius:6px;padding:4px 10px;font-size:12px;color:${col.ch};cursor:pointer;">
+            ${r.opts[r.idx].label} ›</button>
+        </div>`).join("")}
+    </div>`;
+}
+
+// ---- 一覧 ----
+function renderList(app, col) {
+  app.innerHTML = `
+    ${headerHTML(col, "", "📖 中国語ノート", iconBtnHTML(col, "⚙ 設定", "toggleSettings()"))}
+    ${settingsPanelHTML(col)}
+    <div style="padding-bottom:100px;">
+      ${state.docs.map(doc => `
+        <div class="doc-item" style="border-color:${col.bd};" onclick="openDoc(${doc.id})">
+          <div class="doc-title" style="color:${col.ch};">${doc.title}</div>
+          <button onclick="event.stopPropagation();deleteDoc(${doc.id})"
+            style="background:none;border:none;color:${col.bd};cursor:pointer;font-size:20px;padding:4px 8px;">×</button>
+        </div>`).join("")}
+      ${state.docs.length === 0 ? `
+        <div style="text-align:center;padding:60px 20px;opacity:0.4;font-size:14px;">
+          ＋ ボタンで新しいドキュメントを作成
+        </div>` : ""}
+    </div>
+    <button class="fab" onclick="newDoc()" style="background:${col.py};">＋</button>
+    <div class="modal-overlay" id="newDocModal" onclick="closeNewDocModal()">
+      <div class="modal-box" style="background:${col.header};" onclick="event.stopPropagation()">
+        <div style="font-size:14px;font-weight:700;color:${col.py};margin-bottom:14px;">新しいドキュメント</div>
+        <input id="newDocTitle" placeholder="タイトルを入力..."
+          style="width:100%;background:${col.input};border:1px solid ${col.bd};border-radius:10px;
+          padding:10px 12px;font-size:16px;font-family:inherit;outline:none;color:${col.ch};margin-bottom:12px;"
+          onkeydown="if(event.key==='Enter')createDoc()">
+        <button class="btn" onclick="createDoc()"
+          style="width:100%;background:${col.py};color:#fff;margin-bottom:8px;">作成する</button>
+        <button class="btn" onclick="closeNewDocModal()"
+          style="width:100%;background:none;border:1px solid ${col.bd};color:${col.ui};">キャンセル</button>
+      </div>
+    </div>`;
+}
+
+// ---- 閲覧 ----
+function renderView(app, col) {
+  const doc = currentDoc();
+  if (!doc) { state.page = "list"; render(); return; }
+  const s = sz();
+  app.innerHTML = `
+    ${headerHTML(col,
+      `<button onclick="goList()" style="background:none;border:none;color:${col.py};cursor:pointer;font-size:15px;">‹ 一覧</button>`,
+      doc.title,
+      iconBtnHTML(col, "⚙", "toggleSettings()")
+    )}
+    ${settingsPanelHTML(col)}
+    <div style="padding:20px 20px 120px;">
+      ${doc.segments.map(seg => `
+        <div class="line-chinese" style="font-size:${s.ch}px;color:${col.ch};">${seg.chinese}</div>
+        <div class="line-pinyin"  style="font-size:${s.py}px;color:${col.py};">${seg.pinyin}</div>
+      `).join("")}
+      ${doc.segments.length === 0 ? `
+        <div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">
+          編集ボタンで文章を入力してください
+        </div>` : ""}
+    </div>
+    <button class="fab" onclick="goEdit()" style="background:${col.py};font-size:20px;">✎</button>`;
+}
+
+// ---- 編集 ----
+function renderEdit(app, col) {
+  const doc = currentDoc();
+  if (!doc) { state.page = "list"; render(); return; }
+  const s = sz();
+  app.innerHTML = `
+    ${headerHTML(col,
+      `<button onclick="cancelEdit()" style="background:none;border:none;color:${col.ui};cursor:pointer;font-size:14px;">取消</button>`,
+      doc.title,
+      `<button onclick="saveEdit()" style="background:${col.py};border:none;border-radius:8px;
+        padding:6px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">保存</button>`
+    )}
+    <div style="padding:12px 16px 6px;">
+      <div style="font-size:12px;opacity:0.45;margin-bottom:8px;">
+        句点（。！？）または改行でピンインが区切られます
+      </div>
+    </div>
+    <div style="padding:0 16px 120px;">
+      <textarea id="edit-textarea"
+        style="width:100%;background:${col.input};border:1px solid ${col.bd};
+          border-radius:10px;padding:14px;resize:none;outline:none;
+          color:${col.ch};font-family:inherit;font-size:${s.ch}px;
+          letter-spacing:0.04em;line-height:1.8;min-height:60vh;border-width:1px;"
+        placeholder="中国語を入力してください。&#10;句点や改行でピンインが挟まります。"
+      >${state.editText}</textarea>
+    </div>`;
+
+  const ta = document.getElementById("edit-textarea");
+  if (ta) {
+    ta.style.height = "auto";
+    ta.style.height = Math.max(ta.scrollHeight, window.innerHeight * 0.65) + "px";
+    ta.addEventListener("input", () => {
+      ta.style.height = "auto";
+      ta.style.height = ta.scrollHeight + "px";
+    });
+  }
+}
+
+// =====================
+// ACTIONS
+// =====================
+function toggleSettings() { state.showSettings = !state.showSettings; render(); }
+function cycleFont()  { state.fontIdx  = (state.fontIdx  + 1) % FONTS.length;  render(); }
+function cycleSize()  { state.sizeIdx  = (state.sizeIdx  + 1) % SIZES.length;  render(); }
+function cycleColor() { state.colorIdx = (state.colorIdx + 1) % COLORS.length; render(); }
+
+function goList() { state.page = "list"; state.showSettings = false; render(); }
+
+function openDoc(id) {
+  state.currentDocId = id;
+  state.page = "view";
+  state.showSettings = false;
+  render();
+}
+
+function goEdit() {
+  const doc = currentDoc();
+  if (!doc) return;
+  state.editText = doc.raw || doc.segments.map(s => s.chinese).join("\n");
+  state.page = "edit";
+  render();
+}
+
+function cancelEdit() { state.page = "view"; render(); }
+
+function saveEdit() {
+  const ta = document.getElementById("edit-textarea");
+  if (!ta) return;
+  const doc = currentDoc();
+  if (!doc) return;
+  doc.raw = ta.value;
+  doc.segments = buildSegments(ta.value, doc.segments);
+  state.page = "view";
+  render();
+}
+
+function deleteDoc(id) {
+  if (!confirm("このドキュメントを削除しますか？")) return;
+  state.docs = state.docs.filter(d => d.id !== id);
+  render();
+}
+
+function newDoc() {
+  render(); // モーダルのためにまず一覧を描画
+  setTimeout(() => {
+    document.getElementById("newDocModal").classList.add("open");
+    setTimeout(() => document.getElementById("newDocTitle")?.focus(), 50);
+  }, 0);
+}
+
+function closeNewDocModal() {
+  document.getElementById("newDocModal")?.classList.remove("open");
+}
+
+function createDoc() {
+  const titleEl = document.getElementById("newDocTitle");
+  const title = titleEl?.value.trim() || "新しいドキュメント";
+  const id = state.nextId++;
+  state.docs.push({ id, title, segments: [], raw: "" });
+  closeNewDocModal();
+  state.currentDocId = id;
+  state.editText = "";
+  state.page = "edit";
+  render();
+}
+
+// =====================
+// BOOT
+// =====================
+function boot() {
+  // サンプルの初期セグメント生成
+  state.docs.forEach(doc => {
+    if (!doc.segments || doc.segments.length === 0) {
+      doc.segments = buildSegments(doc.raw || "", []);
+    }
+  });
+  render();
+}
+
+function waitAndBoot() {
+  if (window.pinyinPro && window.pinyinPro.pinyin) boot();
+  else setTimeout(waitAndBoot, 100);
+}
+waitAndBoot();
+</script>
+</body>
+</html>
