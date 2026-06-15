@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>中国語ノート</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,11 +43,7 @@
 // =====================
 // 定数
 // =====================
-const FONTS = [
-  { label: "ゴシック",   value: "'Hiragino Sans','Noto Sans SC',sans-serif" },
-  { label: "明朝",       value: "'Hiragino Mincho ProN','Noto Serif SC',serif" },
-  { label: "丸ゴシック", value: "'Hiragino Maru Gothic ProN',sans-serif" },
-];
+const FONT = "'Noto Sans SC','Hiragino Sans',sans-serif";
 const SIZES = [
   { label: "小", ch: 17, py: 12 },
   { label: "中", ch: 22, py: 14 },
@@ -71,22 +68,31 @@ let state = {
     {
       id: 1,
       title: "はじめての中国語",
-      // segmentsは表示用：{ chinese, pinyin }の配列
       segments: [],
-      // rawは編集用の生テキスト
       raw: "你好，我叫小明。今天天气很好。\n我喜欢学习中文。",
+    },
+    {
+      id: 2,
+      title: "小説",
+      segments: [],
+      raw: `金陵，大梁帝都。物宝天华王气蒸蔚，这里连城门也与他处不同，格外的巍峨坚实。川流不息入城的人流中，一辆青蓬双辕的马车不起眼地夹在其中，摇摇缓行，在距离城门数丈之地停顿了下来。
+车帘掀起，一个月白衣衫，容颜清朗的年轻人跳下车，前行几步，仰起头凝望着城门上方的"金陵"二字。
+走在马车前方的两名骑士察觉到后面有异样，回过头看了一下，一齐拨转马头奔了过来。这两人都是贵族公子的打扮，年龄也大致相仿，跑在前面的一个远远就在问："苏兄，你怎么了？"
+梅长苏没有回答，他依然保持着仰望城门的姿势，表情凝然不动，一头乌发被风吹起，有几丝零散地覆在苍白的面颊上，使得整个人透出一股深邃的沧桑与悲凉。
+"苏兄是不是累了？"这时另外一人也奔至近前，关切地道，"就快到了，今天可以好好歇歇。"
+"景睿，谢弼，"梅长苏毫无颜色的唇边掠过一抹浅淡的笑，"我想在这里再站一会儿……这么多年没来，想不到金陵城几乎丝毫未变，进了城门后，多半也依然是冠盖满京华的盛况吧……"
+萧景睿微微有些怔忡，问道："怎么苏兄以前……来过金陵？"`,
     },
   ],
   currentDocId: null,
-  fontIdx: 0, sizeIdx: 1, colorIdx: 0,
+  sizeIdx: 1, colorIdx: 0,
   showSettings: false,
   editText: "",
-  nextId: 10,
+  nextId: 20,
 };
 
 const c  = () => COLORS[state.colorIdx];
 const sz = () => SIZES[state.sizeIdx];
-const ft = () => FONTS[state.fontIdx];
 const currentDoc = () => state.docs.find(d => d.id === state.currentDocId);
 
 // =====================
@@ -154,7 +160,7 @@ function getPinyinText(text) {
 function render() {
   const col = c();
   document.body.style.background = col.bg;
-  document.body.style.fontFamily = ft().value;
+  document.body.style.fontFamily = FONT;
   document.body.style.color = col.ui;
   const app = document.getElementById("app");
   if (state.page === "list")      renderList(app, col);
@@ -184,7 +190,6 @@ function settingsPanelHTML(col) {
   return `
     <div id="settings-panel" style="background:${col.header};border:1px solid ${col.bd};">
       ${[
-        { label:"フォント", opts:FONTS,  idx:state.fontIdx,  fn:"cycleFont()"  },
         { label:"サイズ",   opts:SIZES,  idx:state.sizeIdx,  fn:"cycleSize()"  },
         { label:"カラー",   opts:COLORS, idx:state.colorIdx, fn:"cycleColor()" },
       ].map(r => `
@@ -276,7 +281,7 @@ function renderEdit(app, col) {
       <textarea id="edit-textarea"
         style="width:100%;background:${col.input};border:1px solid ${col.bd};
           border-radius:10px;padding:14px;resize:none;outline:none;
-          color:${col.ch};font-family:inherit;font-size:${s.ch}px;
+          color:${col.ch};font-family:${FONT};font-size:${s.ch}px;
           letter-spacing:0.04em;line-height:1.8;min-height:60vh;border-width:1px;"
         placeholder="中国語を入力してください。&#10;句点や改行でピンインが挟まります。"
       >${state.editText}</textarea>
@@ -297,7 +302,6 @@ function renderEdit(app, col) {
 // ACTIONS
 // =====================
 function toggleSettings() { state.showSettings = !state.showSettings; render(); }
-function cycleFont()  { state.fontIdx  = (state.fontIdx  + 1) % FONTS.length;  render(); }
 function cycleSize()  { state.sizeIdx  = (state.sizeIdx  + 1) % SIZES.length;  render(); }
 function cycleColor() { state.colorIdx = (state.colorIdx + 1) % COLORS.length; render(); }
 
