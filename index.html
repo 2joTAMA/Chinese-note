@@ -257,6 +257,10 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   background: rgba(255, 220, 0, 0.45);
   border-radius: 2px;
 }
+.line-chinese {
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+}
 /* マーカーFAB */
 #marker-fab {
   position: fixed; bottom: 76px; right: 20px; z-index: 40;
@@ -790,10 +794,14 @@ function renderView(app) {
     const markers = n.markers || [];
     const chHtml = buildChineseHTML(idx, seg.chinese, markers);
     if (state.showPinyin) {
-      linesHTML += `<div class="line-chinese" data-seg-idx="${idx}" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};">${chHtml}</div>
+      linesHTML += `<div class="line-chinese" data-seg-idx="${idx}"
+        style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};"
+        id="seg-${idx}">${chHtml}</div>
         <div class="line-pinyin" style="font-size:${s.py}px;color:${c.py};line-height:${s.lhPy};margin-bottom:${s.mbPy}px;">${seg.pinyin}</div>`;
     } else {
-      linesHTML += `<div class="line-chinese" data-seg-idx="${idx}" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};margin-bottom:${s.mbNoPy}px;">${chHtml}</div>`;
+      linesHTML += `<div class="line-chinese" data-seg-idx="${idx}"
+        style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};margin-bottom:${s.mbNoPy}px;"
+        id="seg-${idx}">${chHtml}</div>`;
     }
   }
   // 末尾ギャップ・しおり線
@@ -824,8 +832,8 @@ function renderView(app) {
         padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`;
   } else {
     rightBtns =
+      hbtn("edit","編集","goEdit()",c.ui) +
       hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
-      hbtn("draw","マーカー","startMarkerMode()",state.markerMode?"#e8c80a":c.ui) +
       hbtn("settings","設定","toggleSettings()",c.ui);
   }
 
@@ -844,7 +852,7 @@ function renderView(app) {
     )}
     <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
     ${settingsPanel()}
-    <div id="view-content" class="${bm?"bm-mode":""} ${state.markerMode?"marker-mode":""}" style="padding:20px 20px 80px;">
+    <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 80px;">
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
@@ -855,12 +863,7 @@ function renderView(app) {
         style="width:100%;height:auto;display:block;"
         onerror="this.style.display='none'">
     </div>` : ""}
-      ${state.markerMode ? `
-      <button id="marker-fab" class="show" onclick="applyMarkerFromSelection()">
-        <span class="material-icons" style="font-size:22px;">edit</span>
-        <span style="font-size:10px;">マーカー</span>
-      </button>` : ""}
-    ${bottomTabsHTML(c)}
+      ${bottomTabsHTML(c)}
     ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
         style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
@@ -898,6 +901,8 @@ function renderView(app) {
     };
     window.addEventListener("scroll", updateScrollBtns, { passive: true });
     updateScrollBtns();
+    // 長押しリスナーを初期化
+    initLongPressMarker();
   }
 }
 
@@ -1421,16 +1426,194 @@ function buildChineseHTML(segIdx, text, markers) {
   return html;
 }
 
-function startMarkerMode() {
-  const sy = window.scrollY;
-  const n = note(); if (!n) return;
-  // 現在のマーカーを一時コピー（キャンセル用）
-  state.markerDraft = JSON.parse(JSON.stringify(n.markers || []));
-  state.markerMode = true;
-  render();
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-  setTimeout(() => initSelectionListener(), 100);
+function startMarkerMode() { /* 廃止 */ }
+
+// ============================================================
+// 長押しマーカー（セグメント単語展開）
+// ============================================================
+let _expandedSegIdx = null;  // 現在展開中のセグメント番号
+
+function initLongPressMarker() {
+  const vc = document.getElementById("view-content");
+  if (!vc) return;
+
+  let _longPressTimer = null;
+  let _longPressTarget = null;
+
+  vc.addEventListener("touchstart", e => {
+    const seg = e.target.closest("[data-seg-idx]");
+    if (!seg) return;
+    _longPressTarget = seg;
+    _longPressTimer = setTimeout(() => {
+      const idx = parseInt(seg.dataset.segIdx);
+      expandSegment(idx);
+    }, 500);
+  }, { passive: true });
+
+  vc.addEventListener("touchend", () => {
+    clearTimeout(_longPressTimer);
+  }, { passive: true });
+
+  vc.addEventListener("touchmove", () => {
+    clearTimeout(_longPressTimer);
+  }, { passive: true });
+
+  // PC用：長押し相当としてcontextmenu（右クリック）を使用
+  vc.addEventListener("contextmenu", e => {
+    const seg = e.target.closest("[data-seg-idx]");
+    if (!seg) return;
+    e.preventDefault();
+    const idx = parseInt(seg.dataset.segIdx);
+    expandSegment(idx);
+  });
+
+  // 外側タップで閉じる
+  document.addEventListener("click", e => {
+    if (_expandedSegIdx === null) return;
+    const expanded = document.getElementById("seg-expanded-" + _expandedSegIdx);
+    if (expanded && !expanded.contains(e.target)) {
+      collapseSegment();
+    }
+  });
 }
+
+function expandSegment(segIdx) {
+  const n = note(); if (!n) return;
+  const seg = n.segments[segIdx]; if (!seg) return;
+  const c = col(); const s = sz();
+
+  // pinyin-proのsegment機能で単語分割
+  let words = [];
+  if (window.pinyinPro && window.pinyinPro.pinyin) {
+    // pinyin-proのsegment関数で単語分割（最も正確）
+    let segResult = null;
+    if (window.pinyinPro.segment) {
+      segResult = window.pinyinPro.segment(seg.chinese);
+    }
+    if (segResult && Array.isArray(segResult)) {
+      // segment結果: [{origin, type, pinyin}]
+      segResult.forEach(item => {
+        if (item.origin && item.origin.trim()) {
+          const py = Array.isArray(item.pinyin)
+            ? item.pinyin.join(" ")
+            : (item.pinyin || "");
+          words.push({ text: item.origin, pinyin: py });
+        }
+      });
+    }
+    if (words.length === 0) {
+      // フォールバック：pinyin配列と文字を1対1対応
+      const pyArr = window.pinyinPro.pinyin(seg.chinese, {
+        toneType:"symbol", type:"array"
+      });
+      const chars = [...seg.chinese];
+      chars.forEach((ch, i) => {
+        words.push({ text: ch, pinyin: pyArr[i] || "" });
+      });
+    }
+  }
+  if (words.length === 0) {
+    // フォールバック：1文字ずつ
+    words = [...seg.chinese].map(ch => ({
+      text: ch,
+      pinyin: window.pinyinPro?.pinyin(ch, {toneType:"symbol"}) || "",
+    }));
+  }
+
+  _expandedSegIdx = segIdx;
+
+  const el = document.getElementById("seg-" + segIdx);
+  if (!el) return;
+
+  const markers = n.markers || [];
+
+  const btnsHTML = words.map((w, wi) => {
+    const hasMarker = markers.some(m => m.segIdx===segIdx && m.text===w.text);
+    const bg = hasMarker ? "rgba(255,220,0,0.7)" : (c.id==="night" ? "#252530" : "#ede5d8");
+    const border = hasMarker ? "#e8c000" : c.bd;
+    return `<button onclick="toggleWordMarker(${segIdx},${wi})"
+      style="background:${bg};border:1px solid ${border};border-radius:6px;
+        padding:4px 8px;cursor:pointer;font-family:inherit;display:flex;
+        flex-direction:column;align-items:center;gap:1px;">
+      <span style="font-size:${s.ch}px;font-weight:700;color:${c.ch};">${esc(w.text)}</span>
+      <span style="font-size:${s.py}px;color:${c.py};">${w.pinyin}</span>
+    </button>`;
+  }).join("");
+
+  // セグメントをボタン群に差し替え
+  const wrapper = document.createElement("div");
+  wrapper.id = "seg-expanded-" + segIdx;
+  wrapper.dataset.segIdx = segIdx;
+  wrapper.style.cssText = `display:flex;flex-wrap:wrap;gap:6px;padding:8px 0;`;
+  wrapper.innerHTML = btnsHTML;
+
+  el.replaceWith(wrapper);
+
+  // 単語リストをキャッシュ
+  _segWords = words;
+}
+
+let _segWords = [];
+
+function toggleWordMarker(segIdx, wordIdx) {
+  const n = note(); if (!n) return;
+  if (!n.markers) n.markers = [];
+  const w = _segWords[wordIdx]; if (!w) return;
+
+  const existing = n.markers.findIndex(m => m.segIdx===segIdx && m.text===w.text);
+  if (existing >= 0) {
+    n.markers.splice(existing, 1);
+    showToast("マーカーを削除しました");
+  } else {
+    const folder = folderOf(n);
+    n.markers.push({
+      id: Date.now() + wordIdx,
+      segIdx,
+      start: 0, end: [...w.text].length,
+      text: w.text,
+      pinyin: w.pinyin,
+      noteId: n.id, noteTitle: n.title,
+      folderTitle: folder ? folder.title : "",
+      createdAt: new Date().toISOString(),
+    });
+    showToast("マーカーを追加しました");
+  }
+  markUnsaved();
+
+  // ボタンの色だけ更新（rerender不要）
+  const btn = document.querySelector(`#seg-expanded-${segIdx} button:nth-child(${wordIdx+1})`);
+  if (btn) {
+    const c = col();
+    const hasMarker = n.markers.some(m => m.segIdx===segIdx && m.text===w.text);
+    btn.style.background = hasMarker ? "rgba(255,220,0,0.7)" : (c.id==="night" ? "#252530" : "#ede5d8");
+    btn.style.borderColor = hasMarker ? "#e8c000" : c.bd;
+  }
+}
+
+function collapseSegment() {
+  if (_expandedSegIdx === null) return;
+  const segIdx = _expandedSegIdx;
+  const n = note(); if (!n) return;
+  const seg = n.segments[segIdx]; if (!seg) return;
+  const c = col(); const s = sz();
+  const markers = n.markers || [];
+
+  const expanded = document.getElementById("seg-expanded-" + segIdx);
+  if (!expanded) { _expandedSegIdx = null; return; }
+
+  // 元のセグメント表示に戻す
+  const chHtml = buildChineseHTML(segIdx, seg.chinese, markers);
+  const div = document.createElement("div");
+  div.className = "line-chinese";
+  div.dataset.segIdx = segIdx;
+  div.id = "seg-" + segIdx;
+  div.style.cssText = `font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};`;
+  div.innerHTML = chHtml;
+  expanded.replaceWith(div);
+  _expandedSegIdx = null;
+}
+
+
 
 function saveMarkerMode() {
   // 保存して終了（マーカーはすでにnote().markersに反映済み）
