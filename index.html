@@ -252,6 +252,81 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 .scroll-btn.visible { opacity: 1; pointer-events: auto; }
 
+/* ===== マーカー ===== */
+.marked-text {
+  background: rgba(255, 220, 0, 0.45);
+  border-radius: 2px;
+  cursor: pointer;
+}
+/* マーカーモード中のピンイン */
+#view-content.marker-mode .line-pinyin { opacity: 0.2; }
+/* 選択ポップアップ */
+#marker-popup {
+  position: fixed; z-index: 200;
+  display: none; flex-direction: column; gap: 0;
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+#marker-popup.show { display: flex; }
+.marker-popup-btn {
+  border: none; cursor: pointer; padding: 11px 22px;
+  font-size: 14px; font-weight: 700; font-family: inherit;
+  white-space: nowrap;
+}
+
+/* ===== 下部タブ ===== */
+#bottom-tabs {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+  display: flex; border-top-width: 1px; border-top-style: solid;
+  height: 56px;
+}
+.tab-btn {
+  flex: 1; border: none; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; font-size: 10px; font-weight: 600; background: none;
+  transition: opacity 0.15s;
+}
+.tab-btn .material-icons { font-size: 22px; }
+
+/* ===== 単語帳 ===== */
+.vocab-grid {
+  display: grid; grid-template-columns: 1fr;
+  gap: 12px; padding: 16px;
+}
+@media (min-width: 768px)  { .vocab-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1200px) { .vocab-grid { grid-template-columns: 1fr 1fr 1fr; } }
+
+.vocab-date-header {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  opacity: 0.45; padding: 8px 16px 0;
+  grid-column: 1 / -1;
+}
+.vocab-card {
+  border-radius: 12px; padding: 14px 16px;
+  display: flex; align-items: flex-start; gap: 10px;
+  position: relative; overflow: hidden; user-select: none;
+}
+.vocab-card-inner { flex: 1; min-width: 0; }
+.vocab-chinese { font-weight: 700; line-height: 1.4; }
+.vocab-pinyin  { letter-spacing: 0.06em; margin-top: 3px; }
+.vocab-source  { font-size: 10px; opacity: 0.45; margin-top: 5px; }
+.vocab-jump-btn {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px; border-radius: 6px; flex-shrink: 0; opacity: 0.5;
+}
+.vocab-jump-btn:hover { opacity: 1; }
+.vocab-swipe-del {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  display: flex; align-items: center;
+  transform: translateX(100%);
+}
+.vocab-del-btn {
+  border: none; cursor: pointer; height: 100%; padding: 0 20px;
+  color: #fff; font-size: 13px; font-weight: 700; font-family: inherit;
+  background: #e05555;
+}
+
 /* 編集テキストエリア */
 #edit-textarea {
   width: 100%; border-radius: 10px; padding: 14px; resize: none; outline: none;
@@ -355,12 +430,14 @@ const NOVEL_RAW =
 萧景睿微微有些怔忡，问道："怎么苏兄以前……来过金陵？"`;
 
 let state = {
-  page: "connect",   // "connect" | "list" | "view" | "edit"
+  page: "connect",   // "connect" | "list" | "view" | "edit" | "vocab"
   items: [],
   currentNoteId: null,
   colorIdx: 1, sizeIdx: 1,   // boot()で上書き
   showPinyin: true, showSettings: false, listEditMode: false,
   bookmarkMode: false, bookmarkPreview: null,
+  markerMode: false,
+  vocabPage: false,   // 単語帳ページ
   editText: "", editTitleText: "",
   nextId: 1,
   swipeOpen: null, dragId: null,
@@ -386,6 +463,7 @@ function render() {
   else if (state.page==="list") renderList(app);
   else if (state.page==="view") renderView(app);
   else if (state.page==="edit") renderEdit(app);
+  else if (state.page==="vocab") renderVocab(app);
 }
 
 function mkHeader(leftHTML, titleAreaHTML, rightHTML) {
@@ -500,6 +578,7 @@ function renderList(app) {
     <div id="list-scroll" style="padding-bottom:100px;" onclick="closeSwipeOnBg(event)">
       ${itemsHTML}
     </div>
+    ${bottomTabsHTML(c)}
     <button class="fab" onclick="openNewModal()" style="background:${c.accent};">
       <span class="material-icons" style="font-size:26px;">add</span>
     </button>
@@ -695,11 +774,13 @@ function renderView(app) {
       linesHTML += `<div class="bm-gap visible ${isSel?"selected":""}"
         onclick="selectBookmarkGap(${idx})"><div class="bm-gap-line"></div></div>`;
     }
+    const markers = n.markers || [];
+    const chHtml = buildChineseHTML(idx, seg.chinese, markers);
     if (state.showPinyin) {
-      linesHTML += `<div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};">${esc(seg.chinese)}</div>
+      linesHTML += `<div class="line-chinese" data-seg-idx="${idx}" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};">${chHtml}</div>
         <div class="line-pinyin" style="font-size:${s.py}px;color:${c.py};line-height:${s.lhPy};margin-bottom:${s.mbPy}px;">${seg.pinyin}</div>`;
     } else {
-      linesHTML += `<div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};margin-bottom:${s.mbNoPy}px;">${esc(seg.chinese)}</div>`;
+      linesHTML += `<div class="line-chinese" data-seg-idx="${idx}" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};margin-bottom:${s.mbNoPy}px;">${chHtml}</div>`;
     }
   }
   // 末尾ギャップ・しおり線
@@ -731,7 +812,7 @@ function renderView(app) {
   } else {
     rightBtns =
       hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
-      hbtn("edit","編集","goEdit()",c.ui) +
+      hbtn("draw","マーカー","startMarkerMode()",state.markerMode?"#e8c80a":c.ui) +
       hbtn("settings","設定","toggleSettings()",c.ui);
   }
 
@@ -750,7 +831,7 @@ function renderView(app) {
     )}
     <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
     ${settingsPanel()}
-    <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 20px;">
+    <div id="view-content" class="${bm?"bm-mode":""} ${state.markerMode?"marker-mode":""}" style="padding:20px 20px 76px;">
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
@@ -761,7 +842,8 @@ function renderView(app) {
         style="width:100%;height:auto;display:block;"
         onerror="this.style.display='none'">
     </div>` : ""}
-      ${!bm ? `<div class="scroll-btns" id="scroll-btns">
+      ${bottomTabsHTML(c)}
+    ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
         style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
         <span class="material-icons" style="font-size:20px;">keyboard_arrow_up</span>
@@ -1266,7 +1348,8 @@ async function driveLoad() {
     state.items.forEach(item=>{
       if(item.kind==="note"){
         item.segments=buildSegments(item.raw||"", []);
-        if(item.bookmarkIdx===undefined)item.bookmarkIdx=null;
+        if(item.bookmarkIdx===undefined) item.bookmarkIdx=null;
+        if(!item.markers) item.markers=[];
       }
     });
     state.unsaved=false;
@@ -1293,6 +1376,365 @@ function driveButtonsHTML(c) {
       <span class="material-icons">cloud_upload</span>
       <span class="hbtn-label">保存${dot}</span>
     </button>`;
+}
+
+// ============================================================
+// マーカー機能
+// ============================================================
+
+// セグメントの中国語テキストをHTML化（マーカー部分をハイライト）
+function buildChineseHTML(segIdx, text, markers) {
+  const chars = [...text]; // Unicode文字単位で分割
+  const marked = new Array(chars.length).fill(false);
+  // このセグメントのマーカーをすべて適用
+  markers.forEach(m => {
+    if (m.segIdx === segIdx) {
+      for (let i = m.start; i < m.end && i < chars.length; i++) marked[i] = true;
+    }
+  });
+  let html = "";
+  let inMark = false;
+  chars.forEach((ch, i) => {
+    if (marked[i] && !inMark) { html += '<span class="marked-text">'; inMark = true; }
+    if (!marked[i] && inMark) { html += '</span>'; inMark = false; }
+    html += ch.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  });
+  if (inMark) html += '</span>';
+  return html;
+}
+
+function startMarkerMode() {
+  const sy = window.scrollY;
+  state.markerMode = true;
+  render();
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+  // 選択イベントを登録
+  setTimeout(() => initSelectionListener(), 100);
+}
+
+function endMarkerMode() {
+  const sy = window.scrollY;
+  state.markerMode = false;
+  removeSelectionListener();
+  hideMarkerPopup();
+  render();
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+}
+
+function clearAllMarkers() {
+  const n = note(); if (!n) return;
+  if (!confirm("このノートのマーカーをすべて削除しますか？")) return;
+  n.markers = [];
+  markUnsaved();
+  const sy = window.scrollY;
+  render();
+  setTimeout(() => initSelectionListener(), 100);
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+}
+
+// 選択リスナー
+let _selectionHandler = null;
+function initSelectionListener() {
+  removeSelectionListener();
+  _selectionHandler = () => handleTextSelection();
+  document.addEventListener("selectionchange", _selectionHandler);
+}
+function removeSelectionListener() {
+  if (_selectionHandler) {
+    document.removeEventListener("selectionchange", _selectionHandler);
+    _selectionHandler = null;
+  }
+}
+
+function hideMarkerPopup() {
+  const popup = document.getElementById("marker-popup");
+  if (popup) popup.classList.remove("show");
+  window.getSelection()?.removeAllRanges();
+}
+
+function handleTextSelection() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+    hideMarkerPopup(); return;
+  }
+  // view-content内の選択のみ対象
+  const vc = document.getElementById("view-content");
+  if (!vc || !vc.contains(sel.anchorNode)) { hideMarkerPopup(); return; }
+
+  const selText = sel.toString().trim();
+  if (!selText) { hideMarkerPopup(); return; }
+
+  // 選択範囲がどのセグメント・位置か特定
+  const range = sel.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+
+  // セグメント要素から情報を取得
+  const segEl = sel.anchorNode.parentElement?.closest("[data-seg-idx]");
+  const n = note();
+  if (!n) return;
+
+  // マーカーと重複するか確認
+  const anchorSeg = segEl ? parseInt(segEl.dataset.segIdx) : -1;
+  const overlaps = n.markers && n.markers.some(m => {
+    if (m.segIdx !== anchorSeg) return false;
+    // テキスト内で重複チェック（簡易）
+    const segText = n.segments[m.segIdx]?.chinese || "";
+    const selInSeg = selText;
+    const markStart = segText.indexOf(m.text);
+    if (markStart < 0) return false;
+    const selStart = segText.indexOf(selInSeg);
+    if (selStart < 0) return false;
+    return !(selStart + selInSeg.length <= markStart || selStart >= markStart + m.text.length);
+  });
+
+  showMarkerPopup(rect, selText, overlaps, anchorSeg, n);
+}
+
+function showMarkerPopup(rect, selText, overlaps, segIdx, n) {
+  const c = col();
+  let popup = document.getElementById("marker-popup");
+  if (!popup) {
+    popup = document.createElement("div");
+    popup.id = "marker-popup";
+    document.body.appendChild(popup);
+  }
+  popup.style.cssText = `position:fixed;z-index:200;display:flex;flex-direction:column;
+    border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.3);`;
+
+  if (overlaps) {
+    popup.innerHTML = `<button class="marker-popup-btn"
+      style="background:#e05555;color:#fff;"
+      onclick="removeMarkerByText('${selText.replace(/'/g,"\'")}',${segIdx})">マーカーを削除</button>`;
+  } else {
+    popup.innerHTML = `<button class="marker-popup-btn"
+      style="background:#f5d000;color:#333;"
+      onclick="addMarker('${selText.replace(/'/g,"\'")}',${segIdx})">マーカー</button>`;
+  }
+  popup.classList.add("show");
+
+  // ポップアップ位置（選択範囲の上）
+  const top = Math.max(rect.top - 50, 60);
+  const left = Math.max(8, Math.min(rect.left + rect.width/2 - 60, window.innerWidth - 140));
+  popup.style.top = top + "px";
+  popup.style.left = left + "px";
+}
+
+function addMarker(selText, segIdx) {
+  const n = note(); if (!n) return;
+  if (!n.markers) n.markers = [];
+  const seg = n.segments[segIdx];
+  if (!seg) { hideMarkerPopup(); return; }
+  const segText = seg.chinese;
+  const start = segText.indexOf(selText);
+  if (start < 0) { hideMarkerPopup(); return; }
+  const end = start + [...selText].length;
+  const pinyin = getPy(selText);
+  const folder = folderOf(n);
+  n.markers.push({
+    id: Date.now(),
+    segIdx,
+    start,
+    end,
+    text: selText,
+    pinyin,
+    noteId: n.id,
+    noteTitle: n.title,
+    folderTitle: folder ? folder.title : "",
+    createdAt: new Date().toISOString(),
+  });
+  markUnsaved();
+  hideMarkerPopup();
+  const sy = window.scrollY;
+  render();
+  setTimeout(() => initSelectionListener(), 100);
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+}
+
+function removeMarkerByText(selText, segIdx) {
+  const n = note(); if (!n || !n.markers) return;
+  // 選択テキストと重複するマーカーをすべて削除
+  n.markers = n.markers.filter(m => {
+    if (m.segIdx !== segIdx) return true;
+    const segText = n.segments[m.segIdx]?.chinese || "";
+    const mStart = segText.indexOf(m.text);
+    const sStart = segText.indexOf(selText);
+    if (mStart < 0 || sStart < 0) return true;
+    // 重複チェック
+    return (sStart + [...selText].length <= mStart || sStart >= mStart + [...m.text].length);
+  });
+  markUnsaved();
+  hideMarkerPopup();
+  const sy = window.scrollY;
+  render();
+  setTimeout(() => initSelectionListener(), 100);
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+}
+
+// ============================================================
+// 単語帳
+// ============================================================
+
+function getAllMarkers() {
+  // 全ノートのマーカーを日付降順で返す
+  const all = [];
+  state.items.forEach(item => {
+    if (item.kind !== "note" || !item.markers) return;
+    const folder = folderOf(item);
+    item.markers.forEach(m => {
+      all.push({
+        ...m,
+        noteId: item.id,
+        noteTitle: item.title,
+        folderTitle: folder ? folder.title : "",
+      });
+    });
+  });
+  all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return all;
+}
+
+function renderVocab(app) {
+  const c = col(); const s = sz();
+  const markers = getAllMarkers();
+
+  // 日付ごとにグループ化
+  const groups = {};
+  markers.forEach(m => {
+    const d = m.createdAt ? m.createdAt.slice(0,10) : "不明";
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(m);
+  });
+
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  function dateLabel(d) {
+    if (d === today) return "今日";
+    if (d === yesterday) return "昨日";
+    return d.replace(/-/g, "/");
+  }
+
+  let gridHTML = "";
+  Object.keys(groups).forEach(date => {
+    gridHTML += `<div class="vocab-date-header" style="color:${c.ui};">${dateLabel(date)}</div>`;
+    groups[date].forEach(m => {
+      const source = [m.folderTitle, m.noteTitle].filter(Boolean).join(" › ");
+      gridHTML += `
+        <div class="vocab-card" id="vc-${m.id}" style="background:${c.header};">
+          <div class="vocab-card-inner">
+            <div class="vocab-chinese" style="font-size:${s.ch}px;color:${c.ch};">
+              <span style="background:rgba(255,220,0,0.4);border-radius:2px;padding:0 2px;">${esc(m.text)}</span>
+            </div>
+            <div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};">${m.pinyin||""}</div>
+            <div class="vocab-source" style="color:${c.ui};">${esc(source)}</div>
+          </div>
+          <button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId})"
+            style="color:${c.ui};" title="本文へジャンプ">
+            <span class="material-icons" style="font-size:20px;">open_in_new</span>
+          </button>
+          <div class="vocab-swipe-del" id="vsd-${m.id}">
+            <button class="vocab-del-btn" onclick="deleteMarkerById(${m.id})">削除</button>
+          </div>
+        </div>`;
+    });
+  });
+
+  if (!gridHTML) {
+    gridHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;opacity:0.4;font-size:14px;">
+      マーカーした単語・フレーズがここに並びます</div>`;
+  }
+
+  app.innerHTML = `
+    ${mkHeader("",
+      `<div class="header-main-title" style="color:${c.ch};">単語帳</div>`,
+      hbtn("settings","設定","toggleSettings()",c.ui)
+    )}
+    <div style="padding:8px 16px;font-size:12px;opacity:0.45;border-bottom:1px solid ${c.bd};">
+      <span class="material-icons" style="font-size:14px;vertical-align:middle;">open_in_new</span>
+      アイコンで本文へジャンプ　｜　左スワイプで削除
+    </div>
+    ${settingsPanel()}
+    <div class="vocab-grid">${gridHTML}</div>
+    ${bottomTabsHTML(c)}`;
+
+  initVocabSwipe();
+}
+
+function jumpToNote(noteId) {
+  state.currentNoteId = noteId;
+  state.page = "view";
+  state.markerMode = false;
+  render();
+}
+
+function deleteMarkerById(markerId) {
+  state.items.forEach(item => {
+    if (item.kind === "note" && item.markers) {
+      item.markers = item.markers.filter(m => m.id !== markerId);
+    }
+  });
+  markUnsaved();
+  render();
+}
+
+function initVocabSwipe() {
+  document.querySelectorAll(".vocab-card").forEach(card => {
+    const id = card.id.replace("vc-","");
+    const delEl = document.getElementById("vsd-"+id);
+    if (!delEl) return;
+    let startX = 0, tracking = false;
+    card.addEventListener("touchstart", e => { startX = e.touches[0].clientX; tracking = false; }, {passive:true});
+    card.addEventListener("touchmove", e => {
+      const dx = e.touches[0].clientX - startX;
+      if (!tracking && Math.abs(dx) < 10) return;
+      tracking = true;
+      const w = delEl.scrollWidth;
+      const moved = Math.max(0, Math.min(-dx, w));
+      card.style.transform = `translateX(-${moved}px)`;
+      delEl.style.transform = `translateX(${w-moved}px)`;
+    }, {passive:true});
+    card.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const w = delEl.scrollWidth;
+      if (dx < -w/2) {
+        card.style.transform = `translateX(-${w}px)`;
+        delEl.style.transform = `translateX(0)`;
+      } else {
+        card.style.transform = "";
+        delEl.style.transform = `translateX(${w}px)`;
+      }
+    });
+  });
+}
+
+// ============================================================
+// 下部タブ
+// ============================================================
+function bottomTabsHTML(c) {
+  const hasNotes = state.items.some(i => i.kind==="note");
+  if (!hasNotes) return "";
+  const isVocab = state.page === "vocab";
+  const isNote  = !isVocab;
+  return `<div id="bottom-tabs" style="background:${c.header};border-color:${c.bd};">
+    <button class="tab-btn" onclick="goNoteTab()"
+      style="color:${isNote ? c.accent : c.ui};">
+      <span class="material-icons">${isNote?"menu_book":"menu_book"}</span>
+      <span>ノート</span>
+    </button>
+    <button class="tab-btn" onclick="goVocabTab()"
+      style="color:${isVocab ? c.accent : c.ui};">
+      <span class="material-icons">${isVocab?"bookmarks":"bookmarks"}</span>
+      <span>単語帳</span>
+    </button>
+  </div>`;
+}
+
+function goNoteTab() {
+  if (state.page === "list" || state.page === "view" || state.page === "edit") return;
+  state.page = "list"; render();
+}
+function goVocabTab() {
+  if (state.page === "vocab") return;
+  state.page = "vocab"; render();
 }
 
 // ============================================================
