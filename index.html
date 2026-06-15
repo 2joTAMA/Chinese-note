@@ -5,48 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>中国語ノート</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   font-family: 'Noto Sans SC', 'Hiragino Sans', sans-serif; }
 
+/* Material Icons サイズ調整 */
+.material-icons { font-size: 22px; vertical-align: middle; line-height: 1; }
+
 /* ヘッダー */
 .header {
   position: sticky; top: 0; z-index: 10;
-  padding: 12px 16px; border-bottom-width: 1px; border-bottom-style: solid;
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 0 12px; height: 52px; border-bottom-width: 1px; border-bottom-style: solid;
+  display: flex; align-items: center; gap: 4px;
 }
-.header-title { font-size: 16px; font-weight: 700; flex: 1; }
-.header-btns  { display: flex; gap: 8px; align-items: center; }
+.header-title { font-size: 16px; font-weight: 700; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-btns  { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+
+/* ヘッダーボタン：アイコンのみ（スマホ） */
 .hbtn {
   background: none; border: none; cursor: pointer;
-  font-size: 18px; padding: 4px 6px; border-radius: 6px; line-height: 1;
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 8px; border-radius: 8px; font-family: inherit;
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+/* タブレット以上でラベルを表示 */
+.hbtn-label { display: none; }
+@media (min-width: 768px) {
+  .hbtn-label { display: inline; }
+  .hbtn { padding: 6px 10px; }
 }
 
 /* 設定パネル */
 #settings-panel {
-  position: fixed; top: 50px; right: 12px; z-index: 100;
+  position: fixed; top: 54px; right: 12px; z-index: 100;
   border-radius: 14px; padding: 16px; min-width: 220px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.22);
 }
-.sp-label { font-size: 11px; opacity: 0.55; margin-bottom: 8px; letter-spacing: 0.05em; }
-.sp-row   { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.sp-label { font-size: 11px; opacity: 0.55; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+.sp-row   { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
 .sp-row:last-child { margin-bottom: 0; }
 .sp-chip {
-  border-radius: 20px; padding: 5px 12px; font-size: 13px; cursor: pointer;
-  border-width: 1px; border-style: solid; font-family: inherit;
+  border-radius: 20px; padding: 5px 14px; font-size: 13px; cursor: pointer;
+  border-width: 1.5px; border-style: solid; font-family: inherit; font-weight: 500;
+  transition: background 0.15s, color 0.15s;
 }
-.sp-toggle {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;
-}
+.sp-toggle { display: flex; align-items: center; justify-content: space-between; }
 .toggle-track {
-  width: 42px; height: 24px; border-radius: 12px; position: relative;
+  width: 44px; height: 26px; border-radius: 13px; position: relative;
   cursor: pointer; transition: background 0.2s; flex-shrink: 0;
 }
 .toggle-thumb {
-  position: absolute; top: 3px; width: 18px; height: 18px;
+  position: absolute; top: 3px; width: 20px; height: 20px;
   border-radius: 50%; background: #fff; transition: left 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 
 /* 一覧 */
@@ -57,10 +71,11 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 .list-item-inner {
   flex: 1; display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; cursor: pointer; transition: transform 0.2s ease;
+  padding: 13px 16px; cursor: pointer; transition: transform 0.2s ease;
 }
-.item-icon  { font-size: 18px; flex-shrink: 0; }
-.item-title { font-size: 15px; font-weight: 500; }
+.item-icon  { font-size: 20px; flex-shrink: 0; width: 24px; text-align: center; }
+.item-title { font-size: 15px; font-weight: 500; flex: 1; }
+.item-chevron { opacity: 0.6; display: flex; align-items: center; }
 .item-edit-title {
   font-size: 15px; font-weight: 500; flex: 1;
   background: none; border: none; outline: none; font-family: inherit;
@@ -72,47 +87,60 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 .swipe-btn {
   border: none; cursor: pointer; font-size: 13px; font-weight: 600;
-  padding: 0 18px; color: #fff; white-space: nowrap;
+  padding: 0 20px; color: #fff; white-space: nowrap; font-family: inherit;
 }
-.folder-children { overflow: hidden; transition: max-height 0.25s ease; }
+
+/* フォルダ子要素 */
+.folder-children {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.folder-children.open { max-height: 2000px; }
 
 /* ドラッグ */
-.dragging { opacity: 0.4; }
-.drag-over-folder { outline: 2px dashed currentColor; outline-offset: -2px; border-radius: 4px; }
+.dragging { opacity: 0.35; }
+.drag-over-folder { outline: 2px dashed currentColor; outline-offset: -3px; border-radius: 4px; }
 
 /* ビューア */
-.line-chinese { font-weight: 700; line-height: 1.5; letter-spacing: 0.04em; }
-.line-pinyin  { line-height: 1.4; letter-spacing: 0.06em; margin-bottom: 14px; }
+.line-chinese { font-weight: 700; letter-spacing: 0.04em; }
+.line-pinyin  { letter-spacing: 0.06em; }
 
 /* モーダル */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.45); align-items: flex-end; z-index: 50;
+  background: rgba(0,0,0,0.45); align-items: flex-end; justify-content: center; z-index: 50;
 }
 .modal-overlay.open { display: flex; }
-.modal-box { width: 100%; border-radius: 20px 20px 0 0; padding: 24px 20px 44px; }
-.modal-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+.modal-box {
+  width: 100%; max-width: 420px; margin: 0 auto;
+  border-radius: 20px 20px 0 0; padding: 24px 20px 44px;
+}
+.modal-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
 .modal-input {
   width: 100%; border-radius: 10px; padding: 10px 12px; font-size: 16px;
   font-family: inherit; outline: none; border-width: 1px; border-style: solid; margin-bottom: 12px;
 }
 .mbtn {
-  width: 100%; border: none; border-radius: 10px; padding: 12px;
+  width: 100%; border: none; border-radius: 10px; padding: 13px;
   font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.mbtn-ghost { background: none; border-width: 1px; border-style: solid; }
+.mbtn-ghost { background: none !important; border-width: 1px; border-style: solid; }
 
 /* FAB */
 .fab {
   position: fixed; bottom: 28px; right: 24px; width: 52px; height: 52px;
   border-radius: 50%; color: #fff; font-size: 28px; border: none; cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.28); display: flex; align-items: center; justify-content: center;
+  transition: transform 0.15s;
 }
+.fab:active { transform: scale(0.93); }
 
 /* 編集テキストエリア */
 #edit-textarea {
   width: 100%; border-radius: 10px; padding: 14px; resize: none; outline: none;
-  line-height: 1.8; font-family: inherit; border-width: 1px; border-style: solid;
+  line-height: 1.9; font-family: inherit; border-width: 1px; border-style: solid;
   min-height: 60vh;
 }
 </style>
@@ -122,37 +150,36 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 
 <script>
 // ============================================================
-// テーマ定義
+// テーマ
 // ============================================================
 const COLORS = [
   {
     id: "night-cream",
-    label: "夜(クリーム)",
-    bg: "#1c1c24", header: "#14141a", ch: "#ede0cc", py: "#88c0a0",
-    ui: "#b8b8c8", bd: "#2e2e3a", input: "#252530", accent: "#88c0a0",
-  },
-  {
-    id: "night-green",
-    label: "夜(緑)",
-    bg: "#141e1a", header: "#0e1712", ch: "#c8e6c0", py: "#7ab8d4",
-    ui: "#a8c8a8", bd: "#243028", input: "#1a2820", accent: "#7ab8d4",
+    label: "夜",
+    bg: "#1c1c24", header: "#14141a",
+    ch: "#f5f0e6",   // 白に近いベージュ（オレンジ味を抑える）
+    py: "#88c0a0",
+    ui: "#a8a8b8", bd: "#2e2e3a", input: "#252530", accent: "#88c0a0",
+    childBg: "#18181f",
   },
   {
     id: "paper",
     label: "紙",
-    bg: "#f5f0e8", header: "#ede5d8", ch: "#3a2d1e", py: "#7a6a4a",
+    bg: "#f5f0e8", header: "#ede5d8",
+    ch: "#3a2d1e", py: "#7a6a4a",
     ui: "#5a4a3a", bd: "#ddd0bc", input: "#fdfaf5", accent: "#7a6a4a",
+    childBg: "#ede5d8",
   },
 ];
 
 const SIZES = [
-  { label: "小", ch: 17, py: 12 },
-  { label: "中", ch: 22, py: 14 },
-  { label: "大", ch: 28, py: 17 },
+  { label: "小", ch: 17, py: 12, lhCh: 1.6, lhPy: 1.4, mbPy: 10, mbNoPy: 14 },
+  { label: "中", ch: 22, py: 14, lhCh: 1.6, lhPy: 1.4, mbPy: 14, mbNoPy: 18 },
+  { label: "大", ch: 28, py: 17, lhCh: 1.6, lhPy: 1.4, mbPy: 18, mbNoPy: 24 },
 ];
 
 // ============================================================
-// 区切り処理（句点+"は区切らない）
+// 区切り処理
 // ============================================================
 const DELIMITERS_SPLIT = /([。！？!?]+)/;
 const DELIMITERS_TEST  = /^[。！？!?]+$/;
@@ -165,7 +192,6 @@ function buildSegments(raw, oldSegments) {
   raw.split(/\n/).forEach(block => {
     block = block.trim();
     if (!block) return;
-
     const parts = block.split(DELIMITERS_SPLIT);
     let buf = "";
     for (let i = 0; i < parts.length; i++) {
@@ -173,19 +199,12 @@ function buildSegments(raw, oldSegments) {
       if (!part) continue;
       if (DELIMITERS_TEST.test(part)) {
         buf += part;
-        // 次のパーツが「"」「」」などの閉じ括弧なら区切らずに続ける
         const next = parts[i + 1] || "";
-        if (/^["""」』】〕)）]/.test(next)) {
-          // 閉じ括弧を吸収してから確定
-          buf += next;
-          i++;
-        }
+        if (/^["""」』】〕)）]/.test(next)) { buf += next; i++; }
         const text = buf.trim();
         if (text) segments.push({ chinese: text, pinyin: oldMap[text] || getPy(text) });
         buf = "";
-      } else {
-        buf += part;
-      }
+      } else { buf += part; }
     }
     const text = buf.trim();
     if (text) segments.push({ chinese: text, pinyin: oldMap[text] || getPy(text) });
@@ -212,26 +231,18 @@ const NOVEL_RAW =
 萧景睿微微有些怔忡，问道："怎么苏兄以前……来过金陵？"`;
 
 let state = {
-  page: "list",         // "list" | "view" | "edit"
-  items: [              // フォルダ・ノートの混在リスト
+  page: "list",
+  items: [
     { kind: "note",   id: 1, title: "はじめての中国語", raw: "你好，我叫小明。今天天气很好。\n我喜欢学习中文。", segments: [], folderId: null },
     { kind: "folder", id: 2, title: "小説", open: true },
     { kind: "note",   id: 3, title: "第1章", raw: NOVEL_RAW, segments: [], folderId: 2 },
   ],
   currentNoteId: null,
-  colorIdx: 0,
-  sizeIdx: 1,
-  showPinyin: true,
-  showSettings: false,
-  listEditMode: false,
+  colorIdx: 0, sizeIdx: 1,
+  showPinyin: true, showSettings: false, listEditMode: false,
   editText: "",
   nextId: 20,
-  // スワイプ
-  swipeId: null,
-  swipeX: 0,
-  swipeStartX: 0,
-  swipeOpen: null,    // 現在開いているスワイプのid
-  // ドラッグ
+  swipeOpen: null,
   dragId: null,
 };
 
@@ -240,7 +251,7 @@ const sz   = () => SIZES[state.sizeIdx];
 const note = () => state.items.find(i => i.id === state.currentNoteId);
 
 // ============================================================
-// RENDER ROOT
+// RENDER
 // ============================================================
 function render() {
   const c = col();
@@ -252,45 +263,45 @@ function render() {
   else if (state.page === "edit") renderEdit(app);
 }
 
-// ============================================================
-// HEADER HELPER
-// ============================================================
-function header(leftHTML, titleHTML, rightHTML) {
+// ---- ヘッダー ----
+function mkHeader(leftHTML, titleHTML, rightHTML) {
   const c = col();
   return `<div class="header" style="background:${c.header};border-color:${c.bd};">
-    <div style="min-width:60px;">${leftHTML}</div>
+    <div style="flex-shrink:0;min-width:44px;">${leftHTML}</div>
     <div class="header-title" style="color:${c.ch};">${titleHTML}</div>
     <div class="header-btns">${rightHTML}</div>
   </div>`;
 }
 
-// ============================================================
-// SETTINGS PANEL
-// ============================================================
+function hbtn(icon, label, onclick, color) {
+  return `<button class="hbtn" onclick="${onclick}" style="color:${color};">
+    <span class="material-icons">${icon}</span>
+    <span class="hbtn-label">${label}</span>
+  </button>`;
+}
+
+// ---- 設定パネル ----
 function settingsPanel() {
   if (!state.showSettings) return "";
-  const c = col(); const s = sz();
-  const chipStyle = (active) =>
-    `class="sp-chip" style="background:${active ? c.accent : c.input};
-     border-color:${active ? c.accent : c.bd};
-     color:${active ? '#fff' : c.ui};"`;
-
-  // トグル
+  const c = col();
+  const chip = (active, label, onclick) =>
+    `<button class="sp-chip" onclick="${onclick}"
+      style="background:${active ? c.accent : c.input};border-color:${active ? c.accent : c.bd};
+             color:${active ? '#fff' : c.ui};">${label}</button>`;
   const trackBg  = state.showPinyin ? c.accent : c.bd;
   const thumbPos = state.showPinyin ? "21px" : "3px";
-
   return `<div id="settings-panel" style="background:${c.header};border:1px solid ${c.bd};">
     <div class="sp-label">文字サイズ</div>
     <div class="sp-row">
-      ${SIZES.map((sz2, i) => `<button ${chipStyle(state.sizeIdx === i)} onclick="setSizeIdx(${i})">${sz2.label}</button>`).join("")}
+      ${SIZES.map((s,i) => chip(state.sizeIdx===i, s.label, `setSizeIdx(${i})`)).join("")}
     </div>
     <div class="sp-label">カラー</div>
     <div class="sp-row">
-      ${COLORS.map((cc, i) => `<button ${chipStyle(state.colorIdx === i)} onclick="setColorIdx(${i})">${cc.label}</button>`).join("")}
+      ${COLORS.map((cc,i) => chip(state.colorIdx===i, cc.label, `setColorIdx(${i})`)).join("")}
     </div>
-    <div class="sp-label" style="margin-top:4px;">ピンイン</div>
+    <div class="sp-label" style="margin-top:2px;">ピンイン</div>
     <div class="sp-row sp-toggle">
-      <span style="font-size:13px;">表示する</span>
+      <span style="font-size:13px;color:${c.ui};">表示する</span>
       <div class="toggle-track" style="background:${trackBg};" onclick="togglePinyin()">
         <div class="toggle-thumb" style="left:${thumbPos};"></div>
       </div>
@@ -304,36 +315,36 @@ function settingsPanel() {
 function renderList(app) {
   const c = col(); const em = state.listEditMode;
 
-  // トップレベル（folderId===null）のノートとフォルダを順に
   const topItems = state.items.filter(i => i.kind === "folder" || (i.kind === "note" && !i.folderId));
+  let itemsHTML = topItems.map(item =>
+    item.kind === "folder" ? folderItemHTML(item, c, em) : noteItemHTML(item, c, em, null)
+  ).join("");
 
-  let itemsHTML = "";
-  topItems.forEach(item => {
-    if (item.kind === "folder") {
-      itemsHTML += folderItemHTML(item, c, em);
-    } else {
-      itemsHTML += noteItemHTML(item, c, em, null);
-    }
-  });
-
-  const editBtn = `<button class="hbtn" style="color:${c.ui};" onclick="toggleListEdit()">${em ? "完了" : "✎"}</button>`;
-  const settBtn = `<button class="hbtn" style="color:${c.ui};" onclick="toggleSettings()">⚙</button>`;
+  const rightBtns =
+    hbtn(em ? "check" : "edit", em ? "完了" : "編集", "toggleListEdit()", c.ui) +
+    hbtn("settings", "設定", "toggleSettings()", c.ui);
 
   app.innerHTML = `
-    ${header("", "📖 中国語ノート", editBtn + settBtn)}
+    ${mkHeader("", "📖 中国語ノート", rightBtns)}
     ${settingsPanel()}
-    <div style="padding-bottom:100px;" onclick="closeSwipe()">
+    <div style="padding-bottom:100px;" id="list-scroll" onclick="closeSwipeOnBackground(event)">
       ${itemsHTML}
       ${state.items.length === 0 ? `<div style="text-align:center;padding:60px 20px;opacity:0.4;font-size:14px;">＋ボタンで作成</div>` : ""}
     </div>
-    <button class="fab" onclick="openNewModal()" style="background:${c.accent};">＋</button>
+    <button class="fab" onclick="openNewModal()" style="background:${c.accent};">
+      <span class="material-icons" style="font-size:26px;">add</span>
+    </button>
 
     <!-- 新規作成モーダル -->
     <div class="modal-overlay" id="newModal" onclick="closeNewModal()">
       <div class="modal-box" style="background:${c.header};" onclick="event.stopPropagation()">
         <div class="modal-title" style="color:${c.accent};">新規作成</div>
-        <button class="mbtn" onclick="startNewNote()" style="background:${c.accent};color:#fff;">📄 新規ノート</button>
-        <button class="mbtn" onclick="startNewFolder()" style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};">📁 新規フォルダ</button>
+        <button class="mbtn" onclick="startNewNote()" style="background:${c.accent};color:#fff;">
+          <span class="material-icons">description</span>新規ノート
+        </button>
+        <button class="mbtn" onclick="startNewFolder()" style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};">
+          <span class="material-icons">folder</span>新規フォルダ
+        </button>
         <button class="mbtn mbtn-ghost" onclick="closeNewModal()" style="border-color:${c.bd};color:${c.ui};">キャンセル</button>
       </div>
     </div>
@@ -342,21 +353,27 @@ function renderList(app) {
     <div class="modal-overlay" id="titleModal" onclick="closeTitleModal()">
       <div class="modal-box" style="background:${c.header};" onclick="event.stopPropagation()">
         <div class="modal-title" id="titleModalLabel" style="color:${c.accent};"></div>
-        <input id="titleInput" class="modal-input" style="background:${c.input};border-color:${c.bd};color:${c.ch};"
+        <input id="titleInput" class="modal-input"
+          style="background:${c.input};border-color:${c.bd};color:${c.ch};"
           onkeydown="if(event.key==='Enter')confirmTitle()">
         <button class="mbtn" onclick="confirmTitle()" style="background:${c.accent};color:#fff;">作成</button>
         <button class="mbtn mbtn-ghost" onclick="closeTitleModal()" style="border-color:${c.bd};color:${c.ui};">キャンセル</button>
       </div>
     </div>
 
-    <!-- フォルダ移動モーダル -->
+    <!-- 移動先モーダル -->
     <div class="modal-overlay" id="moveModal" onclick="closeMoveModal()">
       <div class="modal-box" style="background:${c.header};" onclick="event.stopPropagation()">
         <div class="modal-title" style="color:${c.accent};">移動先フォルダを選択</div>
-        ${[{id: null, title: "（フォルダなし・トップレベル）"}, ...state.items.filter(i => i.kind === "folder")].map(f =>
+        <button class="mbtn" onclick="moveNoteTo(null)"
+          style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};text-align:left;">
+          <span class="material-icons">inbox</span>トップレベル（フォルダなし）
+        </button>
+        ${state.items.filter(i => i.kind === "folder").map(f =>
           `<button class="mbtn" onclick="moveNoteTo(${f.id})"
             style="background:${c.input};color:${c.ch};border:1px solid ${c.bd};text-align:left;">
-            ${f.id ? "📁 " : "📄 "}${f.title}</button>`
+            <span class="material-icons">folder</span>${esc(f.title)}
+          </button>`
         ).join("")}
         <button class="mbtn mbtn-ghost" onclick="closeMoveModal()" style="border-color:${c.bd};color:${c.ui};">キャンセル</button>
       </div>
@@ -368,73 +385,76 @@ function renderList(app) {
 
 function folderItemHTML(folder, c, em) {
   const children = state.items.filter(i => i.kind === "note" && i.folderId === folder.id);
-  const arrow = folder.open ? "▾" : "▸";
+  const childrenHTML = children.map(n => noteItemHTML(n, c, em, folder.id)).join("");
+  const isOpen = folder.open;
 
   let inner = "";
   if (em) {
     inner = `<div class="list-item-inner" style="cursor:default;">
-      <span class="item-icon">📁</span>
+      <span class="item-icon"><span class="material-icons" style="color:${c.accent};">folder</span></span>
       <input class="item-edit-title" value="${esc(folder.title)}"
         style="color:${c.ch};border-color:${c.bd};"
         onchange="renameItem(${folder.id}, this.value)">
-      <button onclick="deleteItem(${folder.id})" style="background:none;border:none;color:#e05555;cursor:pointer;font-size:18px;">−</button>
+      <button onclick="deleteItem(${folder.id})" style="background:none;border:none;color:#e05555;cursor:pointer;">
+        <span class="material-icons">remove_circle_outline</span>
+      </button>
     </div>`;
   } else {
-    inner = `<div class="list-item-inner" id="inner-${folder.id}"
-        onclick="toggleFolder(${folder.id})"
-        draggable="false">
-      <span class="item-icon">📁</span>
+    inner = `<div class="list-item-inner" id="inner-${folder.id}" onclick="toggleFolder(${folder.id})">
+      <span class="item-icon"><span class="material-icons" style="color:${c.accent};font-size:22px;">${isOpen ? "folder_open" : "folder"}</span></span>
       <span class="item-title" style="color:${c.ch};">${esc(folder.title)}</span>
-      <span style="margin-left:auto;opacity:0.5;">${arrow}</span>
+      <span class="item-chevron">
+        <span class="material-icons" style="font-size:26px;transition:transform 0.3s;transform:rotate(${isOpen ? 90 : 0}deg);">chevron_right</span>
+      </span>
     </div>
     <div class="swipe-actions" id="swipe-actions-${folder.id}">
       <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${folder.id})">削除</button>
     </div>`;
   }
 
-  const childrenHTML = children.map(n => noteItemHTML(n, c, em, folder.id)).join("");
-  const maxH = folder.open ? (children.length * 60 + 10) + "px" : "0px";
-
   return `
-    <div class="list-item" id="item-${folder.id}" style="border-color:${c.bd};" data-id="${folder.id}" data-kind="folder">
+    <div class="list-item" id="item-${folder.id}" style="border-color:${c.bd};"
+      data-id="${folder.id}" data-kind="folder"
+      ondragover="folderDragOver(event,${folder.id})"
+      ondragleave="folderDragLeave(event,${folder.id})"
+      ondrop="folderDrop(event,${folder.id})">
       ${inner}
     </div>
-    <div class="folder-children" id="children-${folder.id}" style="max-height:${maxH};">
+    <div class="folder-children ${isOpen ? "open" : ""}" id="children-${folder.id}" style="background:${c.childBg};">
       ${childrenHTML}
     </div>`;
 }
 
-function noteItemHTML(note, c, em, folderId) {
-  const indent = folderId ? "padding-left:32px;" : "";
+function noteItemHTML(n, c, em, folderId) {
+  const indent = folderId ? "padding-left:40px;" : "";
   let inner = "";
   if (em) {
     inner = `<div class="list-item-inner" style="cursor:default;${indent}">
-      <span class="item-icon">📄</span>
-      <input class="item-edit-title" value="${esc(note.title)}"
+      <input class="item-edit-title" value="${esc(n.title)}"
         style="color:${c.ch};border-color:${c.bd};"
-        onchange="renameItem(${note.id}, this.value)">
-      <button onclick="deleteItem(${note.id})" style="background:none;border:none;color:#e05555;cursor:pointer;font-size:18px;">−</button>
+        onchange="renameItem(${n.id}, this.value)">
+      <button onclick="deleteItem(${n.id})" style="background:none;border:none;color:#e05555;cursor:pointer;">
+        <span class="material-icons">remove_circle_outline</span>
+      </button>
     </div>`;
   } else {
-    inner = `<div class="list-item-inner" id="inner-${note.id}"
-        onclick="openNote(${note.id})"
+    inner = `<div class="list-item-inner" id="inner-${n.id}"
+        onclick="openNote(${n.id})"
         draggable="true"
-        ondragstart="dragStart(event,${note.id})"
+        ondragstart="dragStart(event,${n.id})"
         ondragend="dragEnd(event)"
         style="${indent}">
-      <span class="item-icon">📄</span>
-      <span class="item-title" style="color:${c.ch};">${esc(note.title)}</span>
-      <span style="margin-left:auto;opacity:0.35;">›</span>
+      <span class="item-title" style="color:${c.ch};">${esc(n.title)}</span>
+      <span class="item-chevron">
+        <span class="material-icons" style="font-size:26px;">chevron_right</span>
+      </span>
     </div>
-    <div class="swipe-actions" id="swipe-actions-${note.id}">
-      <button class="swipe-btn" style="background:#5b8fd4;" onclick="openMoveModal(${note.id})">移動</button>
-      <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${note.id})">削除</button>
+    <div class="swipe-actions" id="swipe-actions-${n.id}">
+      <button class="swipe-btn" style="background:#5b8fd4;" onclick="openMoveModal(${n.id})">移動</button>
+      <button class="swipe-btn" style="background:#e05555;" onclick="deleteItem(${n.id})">削除</button>
     </div>`;
   }
-  return `<div class="list-item" id="item-${note.id}" style="border-color:${c.bd};"
-    data-id="${note.id}" data-kind="note"
-    ondragover="dragOver(event,${note.id})"
-    ondrop="drop(event,${note.id})">
+  return `<div class="list-item" id="item-${n.id}" style="border-color:${c.bd};" data-id="${n.id}" data-kind="note">
     ${inner}
   </div>`;
 }
@@ -447,22 +467,31 @@ function renderView(app) {
   if (!n) { state.page = "list"; render(); return; }
 
   const linesHTML = n.segments.map(seg => {
-    const pyLine = state.showPinyin
-      ? `<div class="line-pinyin" style="font-size:${s.py}px;color:${c.py};">${seg.pinyin}</div>` : "";
-    return `<div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};">${esc(seg.chinese)}</div>${pyLine}`;
+    if (state.showPinyin) {
+      return `<div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};">${esc(seg.chinese)}</div>
+              <div class="line-pinyin"  style="font-size:${s.py}px;color:${c.py};line-height:${s.lhPy};margin-bottom:${s.mbPy}px;">${seg.pinyin}</div>`;
+    } else {
+      return `<div class="line-chinese" style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};margin-bottom:${s.mbNoPy}px;">${esc(seg.chinese)}</div>`;
+    }
   }).join("");
 
+  const rightBtns =
+    hbtn("edit", "編集", "goEdit()", c.ui) +
+    hbtn("settings", "設定", "toggleSettings()", c.ui);
+
   app.innerHTML = `
-    ${header(
-      `<button class="hbtn" style="color:${c.py};" onclick="goList()">‹ 一覧</button>`,
+    ${mkHeader(
+      `<button class="hbtn" onclick="goList()" style="color:${c.py};">
+        <span class="material-icons">arrow_back_ios</span>
+        <span class="hbtn-label">一覧</span>
+      </button>`,
       esc(n.title),
-      `<button class="hbtn" style="color:${c.ui};" onclick="goEdit()">✎</button>
-       <button class="hbtn" style="color:${c.ui};" onclick="toggleSettings()">⚙</button>`
+      rightBtns
     )}
     ${settingsPanel()}
     <div style="padding:20px 20px 120px;">
       ${linesHTML}
-      ${n.segments.length === 0 ? `<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">✎ボタンで編集</div>` : ""}
+      ${n.segments.length === 0 ? `<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>` : ""}
     </div>`;
 }
 
@@ -474,11 +503,12 @@ function renderEdit(app) {
   if (!n) { state.page = "list"; render(); return; }
 
   app.innerHTML = `
-    ${header(
-      `<button onclick="cancelEdit()" style="background:none;border:none;color:${c.ui};cursor:pointer;font-size:14px;">取消</button>`,
+    ${mkHeader(
+      `<button onclick="cancelEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;
+        color:${c.ui};font-family:inherit;padding:6px 4px;white-space:nowrap;">保存せず終了</button>`,
       esc(n.title),
       `<button onclick="saveEdit()" style="background:${c.accent};border:none;border-radius:8px;
-        padding:6px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">保存</button>`
+        padding:7px 16px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`
     )}
     <div style="padding:10px 16px 4px;font-size:12px;opacity:0.4;">句点（。！？）または改行でピンインが区切られます</div>
     <div style="padding:8px 16px 120px;">
@@ -496,36 +526,35 @@ function renderEdit(app) {
 }
 
 // ============================================================
-// ACTIONS — 設定
+// ACTIONS
 // ============================================================
 function toggleSettings() { state.showSettings = !state.showSettings; render(); }
-function setSizeIdx(i)  { state.sizeIdx  = i; render(); }
-function setColorIdx(i) { state.colorIdx = i; render(); }
-function togglePinyin() { state.showPinyin = !state.showPinyin; render(); }
-
-// ============================================================
-// ACTIONS — 一覧
-// ============================================================
+function setSizeIdx(i)    { state.sizeIdx  = i; render(); }
+function setColorIdx(i)   { state.colorIdx = i; render(); }
+function togglePinyin()   { state.showPinyin = !state.showPinyin; render(); }
 function toggleListEdit() { state.listEditMode = !state.listEditMode; render(); }
+
 function toggleFolder(id) {
-  const f = state.items.find(i => i.id === id);
-  if (f) f.open = !f.open;
-  render();
+  const f = state.items.find(i => i.id === id); if (!f) return;
+  f.open = !f.open;
+  // CSSクラスで制御（アニメーション付き）
+  const el = document.getElementById("children-" + id);
+  if (el) el.classList.toggle("open", f.open);
+  // フォルダアイコンと矢印を更新
+  const inner = document.getElementById("inner-" + id);
+  if (inner) {
+    const icon = inner.querySelector(".material-icons:first-child");
+    if (icon) icon.textContent = f.open ? "folder_open" : "folder";
+    const chevron = inner.querySelector(".item-chevron .material-icons");
+    if (chevron) chevron.style.transform = `rotate(${f.open ? 90 : 0}deg)`;
+  }
 }
-function openNote(id) {
-  state.currentNoteId = id;
-  state.page = "view";
-  state.showSettings = false;
-  render();
-}
-function goList() { state.page = "list"; state.showSettings = false; render(); }
-function goEdit() {
-  const n = note(); if (!n) return;
-  state.editText = n.raw || n.segments.map(s => s.chinese).join("\n");
-  state.page = "edit"; render();
-}
-function cancelEdit() { state.page = "view"; render(); }
-function saveEdit() {
+
+function openNote(id)  { state.currentNoteId = id; state.page = "view"; state.showSettings = false; render(); }
+function goList()      { state.page = "list"; state.showSettings = false; render(); }
+function goEdit()      { const n = note(); if (!n) return; state.editText = n.raw || ""; state.page = "edit"; render(); }
+function cancelEdit()  { state.page = "view"; render(); }
+function saveEdit()    {
   const ta = document.getElementById("edit-textarea"); if (!ta) return;
   const n = note(); if (!n) return;
   n.raw = ta.value;
@@ -534,31 +563,28 @@ function saveEdit() {
 }
 
 function renameItem(id, val) {
-  const item = state.items.find(i => i.id === id);
-  if (item) item.title = val;
+  const item = state.items.find(i => i.id === id); if (item) item.title = val;
 }
 function deleteItem(id) {
-  const item = state.items.find(i => i.id === id);
-  if (!item) return;
-  if (item.kind === "folder") {
-    if (!confirm(`「${item.title}」フォルダとその中のノートを削除しますか？`)) return;
-    state.items = state.items.filter(i => !(i.id === id || i.folderId === id));
-  } else {
-    if (!confirm(`「${item.title}」を削除しますか？`)) return;
-    state.items = state.items.filter(i => i.id !== id);
-  }
+  const item = state.items.find(i => i.id === id); if (!item) return;
+  const msg = item.kind === "folder"
+    ? `「${item.title}」フォルダとその中のノートを削除しますか？`
+    : `「${item.title}」を削除しますか？`;
+  if (!confirm(msg)) return;
+  state.items = item.kind === "folder"
+    ? state.items.filter(i => !(i.id === id || i.folderId === id))
+    : state.items.filter(i => i.id !== id);
   render();
 }
 
 // ============================================================
 // MODALS
 // ============================================================
-let _pendingKind = null; // "note" | "folder"
+let _pendingKind = null;
 let _movingNoteId = null;
 
 function openNewModal()  { render(); setTimeout(() => document.getElementById("newModal")?.classList.add("open"), 0); }
 function closeNewModal() { document.getElementById("newModal")?.classList.remove("open"); }
-
 function startNewNote()   { _pendingKind = "note";   closeNewModal(); openTitleModal("新規ノートのタイトル"); }
 function startNewFolder() { _pendingKind = "folder"; closeNewModal(); openTitleModal("新規フォルダのタイトル"); }
 
@@ -572,77 +598,60 @@ function openTitleModal(label) {
   }, 0);
 }
 function closeTitleModal() { document.getElementById("titleModal")?.classList.remove("open"); }
-
 function confirmTitle() {
   const inp = document.getElementById("titleInput");
   const title = inp?.value.trim() || (_pendingKind === "folder" ? "新しいフォルダ" : "新しいノート");
   const id = state.nextId++;
   if (_pendingKind === "folder") {
     state.items.push({ kind: "folder", id, title, open: true });
-    closeTitleModal();
-    render();
+    closeTitleModal(); render();
   } else {
     state.items.push({ kind: "note", id, title, raw: "", segments: [], folderId: null });
     closeTitleModal();
-    state.currentNoteId = id;
-    state.editText = "";
-    state.page = "edit";
-    render();
+    state.currentNoteId = id; state.editText = ""; state.page = "edit"; render();
   }
 }
 
-function openMoveModal(noteId) {
-  _movingNoteId = noteId;
-  closeSwipe();
-  render();
-  setTimeout(() => document.getElementById("moveModal")?.classList.add("open"), 0);
-}
+function openMoveModal(noteId) { _movingNoteId = noteId; closeSwipe(); render(); setTimeout(() => document.getElementById("moveModal")?.classList.add("open"), 0); }
 function closeMoveModal() { document.getElementById("moveModal")?.classList.remove("open"); }
 function moveNoteTo(folderId) {
   const n = state.items.find(i => i.id === _movingNoteId);
   if (n) n.folderId = folderId;
-  closeMoveModal();
-  render();
+  closeMoveModal(); render();
 }
 
 // ============================================================
-// SWIPE（モバイル）
+// SWIPE
 // ============================================================
 function initSwipeListeners() {
-  document.querySelectorAll(".list-item-inner").forEach(el => {
-    let startX = 0, startY = 0, moved = false;
+  document.querySelectorAll(".list-item-inner[id^='inner-']").forEach(el => {
+    let startX = 0, startY = 0, tracking = false;
     el.addEventListener("touchstart", e => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      moved = false;
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY; tracking = false;
     }, { passive: true });
     el.addEventListener("touchmove", e => {
       const dx = e.touches[0].clientX - startX;
       const dy = e.touches[0].clientY - startY;
-      if (!moved && Math.abs(dy) > Math.abs(dx)) return; // 縦スクロール優先
-      moved = true;
+      if (!tracking && Math.abs(dy) > Math.abs(dx)) return;
+      tracking = true;
       const id = parseInt(el.id.replace("inner-", ""));
-      const actions = document.getElementById("swipe-actions-" + id);
-      if (!actions) return;
+      const actions = document.getElementById("swipe-actions-" + id); if (!actions) return;
       const w = actions.scrollWidth;
-      const clamped = Math.max(0, Math.min(-dx, w));
-      el.style.transform = `translateX(-${clamped}px)`;
-      actions.style.transform = `translateX(${w - clamped}px)`;
+      const moved = Math.max(0, Math.min(-dx, w));
+      el.style.transform = `translateX(-${moved}px)`;
+      actions.style.transform = `translateX(${w - moved}px)`;
     }, { passive: true });
     el.addEventListener("touchend", e => {
       const dx = e.changedTouches[0].clientX - startX;
       const id = parseInt(el.id.replace("inner-", ""));
-      const actions = document.getElementById("swipe-actions-" + id);
-      if (!actions) return;
+      const actions = document.getElementById("swipe-actions-" + id); if (!actions) return;
       const w = actions.scrollWidth;
       if (dx < -w / 2) {
         el.style.transform = `translateX(-${w}px)`;
         actions.style.transform = `translateX(0)`;
         state.swipeOpen = id;
       } else {
-        el.style.transform = "";
-        actions.style.transform = `translateX(${w}px)`;
-        state.swipeOpen = null;
+        el.style.transform = ""; actions.style.transform = `translateX(${w}px)`; state.swipeOpen = null;
       }
     });
   });
@@ -653,34 +662,44 @@ function closeSwipe() {
   const id = state.swipeOpen;
   const inner = document.getElementById("inner-" + id);
   const actions = document.getElementById("swipe-actions-" + id);
-  if (inner)   inner.style.transform = "";
+  if (inner) inner.style.transform = "";
   if (actions) { const w = actions.scrollWidth; actions.style.transform = `translateX(${w}px)`; }
   state.swipeOpen = null;
 }
 
-// ============================================================
-// DRAG & DROP（PC・iPad）
-// ============================================================
-function initDragListeners() {
-  document.querySelectorAll(".list-item[data-kind='folder']").forEach(el => {
-    el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("drag-over-folder"); });
-    el.addEventListener("dragleave", () => el.classList.remove("drag-over-folder"));
-    el.addEventListener("drop", e => {
-      e.preventDefault();
-      el.classList.remove("drag-over-folder");
-      const noteId = parseInt(e.dataTransfer.getData("text/plain"));
-      const folderId = parseInt(el.dataset.id);
-      const n = state.items.find(i => i.id === noteId && i.kind === "note");
-      if (n) n.folderId = folderId;
-      state.dragId = null;
-      render();
-    });
-  });
+function closeSwipeOnBackground(e) {
+  if (state.swipeOpen != null && !e.target.closest(".swipe-actions")) closeSwipe();
 }
-function dragStart(e, id) { state.dragId = id; e.dataTransfer.setData("text/plain", id); e.target.closest(".list-item").classList.add("dragging"); }
-function dragEnd(e)       { e.target.closest(".list-item")?.classList.remove("dragging"); }
-function dragOver(e, id)  { e.preventDefault(); }
-function drop(e, id)      { e.preventDefault(); }
+
+// ============================================================
+// DRAG & DROP
+// ============================================================
+function initDragListeners() {}  // イベントはHTMLに直書き
+
+function dragStart(e, id) {
+  state.dragId = id;
+  e.dataTransfer.setData("text/plain", String(id));
+  e.dataTransfer.effectAllowed = "move";
+  setTimeout(() => e.target.closest(".list-item")?.classList.add("dragging"), 0);
+}
+function dragEnd(e) { e.target.closest(".list-item")?.classList.remove("dragging"); state.dragId = null; }
+
+function folderDragOver(e, folderId) {
+  if (state.dragId == null) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = "move";
+  document.getElementById("item-" + folderId)?.classList.add("drag-over-folder");
+}
+function folderDragLeave(e, folderId) {
+  document.getElementById("item-" + folderId)?.classList.remove("drag-over-folder");
+}
+function folderDrop(e, folderId) {
+  e.preventDefault();
+  document.getElementById("item-" + folderId)?.classList.remove("drag-over-folder");
+  const noteId = parseInt(e.dataTransfer.getData("text/plain"));
+  const n = state.items.find(i => i.id === noteId && i.kind === "note");
+  if (n) n.folderId = folderId;
+  state.dragId = null; render();
+}
 
 // ============================================================
 // UTIL
@@ -694,9 +713,8 @@ function esc(s) {
 // ============================================================
 function boot() {
   state.items.forEach(item => {
-    if (item.kind === "note" && (!item.segments || item.segments.length === 0)) {
+    if (item.kind === "note" && (!item.segments || item.segments.length === 0))
       item.segments = buildSegments(item.raw || "", []);
-    }
   });
   render();
 }
