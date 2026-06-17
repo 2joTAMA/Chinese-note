@@ -463,6 +463,8 @@ function buildSegments(raw, oldSegments, doubleBreak) {
   // doubleBreakモード：空行処理を先に
   const processedLines = [];
   lines.forEach(line => {
+    // デバッグ：各行を確認
+    if (!line.trim()) console.log("empty line found, prevEmpty=", prevEmpty, "doubleBreak=", doubleBreak);
     const trimmed = line.trim();
     if (!trimmed) {
       if (doubleBreak && prevEmpty) {
