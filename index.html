@@ -994,7 +994,11 @@ function renderView(app) {
     ${jumpBtn}
 
     ${!bm ? siblingNavHTML(n, c, s) : ""}
-    ${!bm ? endImg : ""}
+    ${!bm ? `<div style="width:100%;line-height:0;">
+      <img src="images/end-of-note.png"
+        style="width:100%;height:auto;display:block;"
+        onerror="this.style.display='none'">
+    </div>` : ""}
       ${bottomTabsHTML(c)}
     ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
