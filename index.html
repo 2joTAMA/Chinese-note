@@ -1204,10 +1204,11 @@ function setSizeIdx(i)    { state.sizeIdx=i; render(); }
 function setColorIdx(i)   { state.colorIdx=i; render(); }
 function togglePinyin()   { state.showPinyin=!state.showPinyin; render(); }
 function toggleDoubleBreak() {
-  const n = note(); if (!n) return;
+  const n = note(); if (!n) { console.log("note() returned null"); return; }
   n.doubleBreak = !n.doubleBreak;
-  // rawから完全再生成（空のoldSegmentsで渡してスペーサーを確実に反映）
+  console.log("doubleBreak:", n.doubleBreak, "raw lines:", n.raw.split("\n").length);
   n.segments = buildSegments(n.raw||"", [], n.doubleBreak);
+  console.log("segments:", n.segments.length, n.segments.filter(s=>s.spacer).length, "spacers");
   markUnsaved();
   const sy = window.scrollY;
   render();
