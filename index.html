@@ -1585,7 +1585,6 @@ async function findDriveFile() {
   );
   const data=await res.json();
   const files = data.files || [];
-  console.log("Drive files found:", files.length, files);
   _driveFileId = files[0]?.id || null;
   return _driveFileId;
 }
