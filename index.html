@@ -1206,11 +1206,10 @@ function togglePinyin()   { state.showPinyin=!state.showPinyin; render(); }
 function toggleDoubleBreak() {
   const n = note(); if (!n) return;
   n.doubleBreak = !n.doubleBreak;
-  // rawから再生成（改行情報はrawに保持されている）
-  n.segments = buildSegments(n.raw||"", n.segments, n.doubleBreak);
+  // rawから完全再生成（空のoldSegmentsで渡してスペーサーを確実に反映）
+  n.segments = buildSegments(n.raw||"", [], n.doubleBreak);
   markUnsaved();
   const sy = window.scrollY;
-  state.showSettings = false; // 設定を閉じる
   render();
   requestAnimationFrame(() => window.scrollTo(0, sy));
 }
