@@ -581,7 +581,7 @@ function settingsPanel() {
   const trackBg  = state.showPinyin ? c.accent : c.bd;
   const thumbPos = state.showPinyin ? "21px" : "3px";
   return `<div id="settings-overlay" onclick="toggleSettings()"></div>
-  <div id="settings-panel" style="background:${c.header};border:1px solid ${c.bd};border-top:none;">
+  <div id="settings-panel" onclick="event.stopPropagation()" style="background:${c.header};border:1px solid ${c.bd};border-top:none;">
     <div class="sp-label">文字サイズ</div>
     <div class="sp-row">${SIZES.map((s,i)=>chip(state.sizeIdx===i,s.label,`setSizeIdx(${i})`)).join("")}</div>
     <div class="sp-label">カラー</div>
@@ -1203,6 +1203,17 @@ function toggleSettings() {
 function setSizeIdx(i)    { state.sizeIdx=i; render(); }
 function setColorIdx(i)   { state.colorIdx=i; render(); }
 function togglePinyin()   { state.showPinyin=!state.showPinyin; render(); }
+function toggleDoubleBreak() {
+  const n = note(); if (!n) return;
+  n.doubleBreak = !n.doubleBreak;
+  // rawから再生成（改行情報はrawに保持されている）
+  n.segments = buildSegments(n.raw||"", n.segments, n.doubleBreak);
+  markUnsaved();
+  const sy = window.scrollY;
+  state.showSettings = false; // 設定を閉じる
+  render();
+  requestAnimationFrame(() => window.scrollTo(0, sy));
+}
 function toggleListEdit() { state.listEditMode=!state.listEditMode; render(); }
 
 function toggleFolder(id) {
