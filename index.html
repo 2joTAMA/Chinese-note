@@ -900,7 +900,7 @@ function renderView(app) {
         padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`;
   } else {
     rightBtns =
-      (state.unsaved ? driveButtonsHTML(c) : "") +
+      driveButtonsHTML(c, true) +
       hbtn("edit","編集","goEdit()",c.ui) +
       hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
       hbtn("draw","単語登録","toggleWordRegMode()", c.ui) +
@@ -1515,13 +1515,15 @@ function driveSignOut() {
   showToast("切断しました"); renderDriveStatus();
 }
 async function findDriveFile() {
-  if(_driveFileId)return _driveFileId;
+  // キャッシュは使わず毎回検索（確実に最新のファイルを取得）
   const res=await fetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'&fields=files(id)`,
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'&fields=files(id,modifiedTime)&orderBy=modifiedTime+desc`,
     {headers:{Authorization:"Bearer "+_accessToken}}
   );
   const data=await res.json();
-  _driveFileId=data.files?.[0]?.id||null;
+  const files = data.files || [];
+  console.log("Drive files found:", files.length, files);
+  _driveFileId = files[0]?.id || null;
   return _driveFileId;
 }
 async function driveSave() {
@@ -1597,14 +1599,23 @@ async function driveLoad() {
 }
 function renderDriveStatus(){ if(state.page==="list")render(); }
 
-function driveButtonsHTML(c) {
+function driveButtonsHTML(c, saveOnly) {
   const dot = state.unsaved ? `<span class="unsaved-dot"></span>` : "";
   const ac = (c && c.accent) ? c.accent : col().accent;
   if(!_accessToken){
+    if (saveOnly) return ""; // ノートビューでは接続ボタン不要
     return `<button onclick="driveSignIn()" class="hbtn" style="color:${ac};">
       <span class="material-icons">cloud</span>
       <span class="hbtn-label">接続</span>
     </button>`;
+  }
+  if (saveOnly) {
+    // 保存ボタンのみ（ノートビュー用）
+    return state.unsaved ? `
+      <button onclick="driveSave()" class="hbtn" style="color:#e8820a;">
+        <span class="material-icons">cloud_upload</span>
+        <span class="hbtn-label">保存${dot}</span>
+      </button>` : "";
   }
   return `
     <button onclick="driveLoad()" class="hbtn" style="color:${ac};">
