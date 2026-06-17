@@ -1207,6 +1207,12 @@ function toggleDoubleBreak() {
   const n = note(); if (!n) { console.log("note() returned null"); return; }
   n.doubleBreak = !n.doubleBreak;
   console.log("doubleBreak:", n.doubleBreak, "raw lines:", n.raw.split("\n").length);
+  // 空行の数を確認
+  const emptyLines = n.raw.split("\n").filter(l => !l.trim()).length;
+  console.log("empty lines:", emptyLines);
+  // 連続空行があるか確認
+  const hasDouble = /\n\s*\n/.test(n.raw);
+  console.log("has double newline:", hasDouble);
   n.segments = buildSegments(n.raw||"", [], n.doubleBreak);
   console.log("segments:", n.segments.length, n.segments.filter(s=>s.spacer).length, "spacers");
   markUnsaved();
