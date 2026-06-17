@@ -451,24 +451,24 @@ const DELIMITERS_SPLIT = /([。！？!?]+)/;
 const DELIMITERS_TEST  = /^[。！？!?]+$/;
 
 function buildSegments(raw, oldSegments, doubleBreak) {
-  console.log("buildSegments called, doubleBreak=", doubleBreak, "raw length=", raw.length);
   const oldMap = {};
   (oldSegments||[]).forEach(s => { oldMap[s.chinese] = s.pinyin; });
   const segments = [];
   // 閉じクォート・括弧マッチ（全角半角対応）
   const closeRe = /^[\u0022\u0027\u201c\u201d\u2018\u2019"""''」』】〕)）]+/;
   const lines = raw.split(/\n/);
-  console.log("lines count=", lines.length, "empty count=", lines.filter(l=>!l.trim()).length);
   let prevEmpty = false;
   // doubleBreakモード：空行処理を先に
   const processedLines = [];
   lines.forEach(line => {
-    // デバッグ：各行を確認
-    if (!line.trim()) console.log("empty line found, prevEmpty=", prevEmpty, "doubleBreak=", doubleBreak);
+
     const trimmed = line.trim();
     if (!trimmed) {
-      if (doubleBreak && prevEmpty) {
-        processedLines.push("__SPACER__");
+      if (doubleBreak) {
+        // 空行1回でスペーサー（連続空行は1つに）
+        if (!prevEmpty) {
+          processedLines.push("__SPACER__");
+        }
       }
       prevEmpty = true;
     } else {
@@ -1208,17 +1208,9 @@ function setSizeIdx(i)    { state.sizeIdx=i; render(); }
 function setColorIdx(i)   { state.colorIdx=i; render(); }
 function togglePinyin()   { state.showPinyin=!state.showPinyin; render(); }
 function toggleDoubleBreak() {
-  const n = note(); if (!n) { console.log("note() returned null"); return; }
+  const n = note(); if (!n) return;
   n.doubleBreak = !n.doubleBreak;
-  console.log("doubleBreak:", n.doubleBreak, "raw lines:", n.raw.split("\n").length);
-  // 空行の数を確認
-  const emptyLines = n.raw.split("\n").filter(l => !l.trim()).length;
-  console.log("empty lines:", emptyLines);
-  // 連続空行があるか確認
-  const hasDouble = /\n\s*\n/.test(n.raw);
-  console.log("has double newline:", hasDouble);
   n.segments = buildSegments(n.raw||"", [], n.doubleBreak);
-  console.log("segments:", n.segments.length, n.segments.filter(s=>s.spacer).length, "spacers");
   markUnsaved();
   const sy = window.scrollY;
   render();
