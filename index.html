@@ -986,9 +986,7 @@ function renderView(app) {
         <div style="font-size:${s.ch*1.3}px;font-weight:700;color:${c.ch};line-height:1.4;letter-spacing:0.06em;">
           ${esc(n.title)}
         </div>
-        <div style="font-size:${s.py*1.1}px;color:${c.py};margin-top:6px;letter-spacing:0.08em;">
-          ${getPy(n.title)}
-        </div>
+        ${state.showPinyin ? `<div style="font-size:${s.py*1.1}px;color:${c.py};margin-top:6px;letter-spacing:0.08em;">${getPy(n.title)}</div>` : ""}
       </div>` : ""}
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
@@ -996,11 +994,7 @@ function renderView(app) {
     ${jumpBtn}
 
     ${!bm ? siblingNavHTML(n, c, s) : ""}
-    ${!bm ? `<div style="width:100%;line-height:0;">
-      <img src="images/end-of-note.png"
-        style="width:100%;height:auto;display:block;"
-        onerror="this.style.display='none'">
-    </div>` : ""}
+    ${!bm ? endImg : ""}
       ${bottomTabsHTML(c)}
     ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
