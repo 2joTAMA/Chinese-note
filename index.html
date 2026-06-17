@@ -1265,7 +1265,7 @@ function saveEdit() {
   if(!newTitle){ showToast("タイトルを入力してください"); return; }
   n.title=newTitle;
   n.raw=ta.value;
-  n.segments=buildSegments(ta.value,n.segments);
+  n.segments=buildSegments(ta.value,n.segments,n.doubleBreak);
   n.bookmarkIdx=null;
   markUnsaved();
   state.page="view"; window.scrollTo(0,0); render();
@@ -1647,6 +1647,7 @@ async function driveLoad() {
     state.nextId=data.nextId??state.nextId;
     state.items.forEach(item=>{
       if(item.kind==="note"){
+        if(item.doubleBreak===undefined) item.doubleBreak=false;
         item.segments=buildSegments(item.raw||"", [], item.doubleBreak);
         if(item.bookmarkIdx===undefined) item.bookmarkIdx=null;
         if(!item.markers) item.markers=[];
