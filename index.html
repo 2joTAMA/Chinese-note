@@ -450,13 +450,34 @@ function getDeviceDefaults() {
 const DELIMITERS_SPLIT = /([。！？!?]+)/;
 const DELIMITERS_TEST  = /^[。！？!?]+$/;
 
-function buildSegments(raw, oldSegments) {
+function buildSegments(raw, oldSegments, doubleBreak) {
   const oldMap = {};
   (oldSegments||[]).forEach(s => { oldMap[s.chinese] = s.pinyin; });
   const segments = [];
   // 閉じクォート・括弧マッチ（全角半角対応）
   const closeRe = /^[\u0022\u0027\u201c\u201d\u2018\u2019"""''」』】〕)）]+/;
-  raw.split(/\n/).forEach(block => {
+  const lines = raw.split(/\n/);
+  let prevEmpty = false;
+  // doubleBreakモード：空行処理を先に
+  const processedLines = [];
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (doubleBreak && prevEmpty) {
+        processedLines.push("__SPACER__");
+      }
+      prevEmpty = true;
+    } else {
+      prevEmpty = false;
+      processedLines.push(trimmed);
+    }
+  });
+  processedLines.forEach(block => {
+    if (block === "__SPACER__") {
+      if (segments.length===0 || segments[segments.length-1].spacer) return;
+      segments.push({ chinese:"", pinyin:"", spacer:true });
+      return;
+    }
     block = block.trim(); if (!block) return;
     const parts = block.split(DELIMITERS_SPLIT);
     let buf = "";
@@ -572,6 +593,20 @@ function settingsPanel() {
         <div class="toggle-thumb" style="left:${thumbPos};"></div>
       </div>
     </div>
+    ${state.page==="view" && state.currentNoteId ? (() => {
+      const n2 = state.items.find(i=>i.id===state.currentNoteId);
+      if (!n2) return "";
+      const db = n2.doubleBreak||false;
+      const dbBg  = db ? c.accent : c.bd;
+      const dbPos = db ? "21px" : "3px";
+      return `<div class="sp-label" style="margin-top:6px;">空行スペース</div>
+        <div class="sp-row sp-toggle">
+          <span style="font-size:13px;color:${c.ui};">連続空行をスペースに</span>
+          <div class="toggle-track" style="background:${dbBg};" onclick="toggleDoubleBreak()">
+            <div class="toggle-thumb" style="left:${dbPos};"></div>
+          </div>
+        </div>`;
+    })() : ""}
   </div>`;
 }
 
@@ -668,6 +703,15 @@ function renderList(app) {
             `<option value="${f.id}">${esc(f.title)}</option>`
           ).join("")}
         </select>
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          padding:4px 0 12px;">
+          <span style="font-size:13px;color:${c.ui};">連続空行をスペースに（歌詞など）</span>
+          <div class="toggle-track" id="newNoteDbTrack" style="background:${c.bd};"
+            onclick="document.getElementById('newNoteDb').checked=!document.getElementById('newNoteDb').checked;this.style.background=document.getElementById('newNoteDb').checked?'${c.accent}':'${c.bd}';this.querySelector('.toggle-thumb').style.left=document.getElementById('newNoteDb').checked?'21px':'3px';">
+            <div class="toggle-thumb" style="left:3px;"></div>
+          </div>
+          <input type="checkbox" id="newNoteDb" style="display:none;">
+        </div>
         <button class="mbtn" onclick="confirmNewNote()" style="background:${c.accent};color:#fff;">作成</button>
         <button class="mbtn mbtn-ghost" onclick="closeNewNoteModal()" style="border-color:${c.bd};color:${c.ui};">キャンセル</button>
       </div>
@@ -842,7 +886,7 @@ function renderView(app) {
 
   let linesHTML = "";
   for (let idx = 0; idx < total; idx++) {
-    const seg = n.segments[idx];
+    const seg = n.segments[idx]; if (!seg) continue;
     // しおり線（このセグメントの前）
     if (!bm && n.bookmarkIdx === idx) {
       linesHTML += `<div class="bookmark-line">
@@ -855,6 +899,11 @@ function renderView(app) {
       const isSel = state.bookmarkPreview === idx;
       linesHTML += `<div class="bm-gap visible ${isSel?"selected":""}"
         onclick="selectBookmarkGap(${idx})"><div class="bm-gap-line"></div></div>`;
+    }
+    // スペーサー行
+    if (seg.spacer) {
+      linesHTML += `<div style="height:${s.ch * 0.8}px;"></div>`;
+      continue;
     }
     const markers = n.markers || [];
     const chHtml = buildChineseHTML(idx, seg.chinese, markers);
@@ -1252,8 +1301,9 @@ function confirmNewNote() {
   const folderVal = document.getElementById("newNoteFolder")?.value;
   const folderId = folderVal ? parseInt(folderVal) : null;
   const id = state.nextId++;
+  const doubleBreak = document.getElementById("newNoteDb")?.checked || false;
   state.items.push({ kind:"note", id, title, raw:body,
-    segments:buildSegments(body,[]), folderId, bookmarkIdx:null });
+    segments:buildSegments(body,[], doubleBreak), folderId, bookmarkIdx:null, doubleBreak });
   markUnsaved();
   closeNewNoteModal();
   showToast("ノートを作成しました");
@@ -1584,7 +1634,7 @@ async function driveLoad() {
     state.nextId=data.nextId??state.nextId;
     state.items.forEach(item=>{
       if(item.kind==="note"){
-        item.segments=buildSegments(item.raw||"", []);
+        item.segments=buildSegments(item.raw||"", [], item.doubleBreak);
         if(item.bookmarkIdx===undefined) item.bookmarkIdx=null;
         if(!item.markers) item.markers=[];
       }
