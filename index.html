@@ -166,14 +166,8 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   cursor: pointer; z-index: 20; border: none; font-family: inherit;
   line-height: 1.3; display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
-/* 単語登録モード中のピンイングレーアウト */
-#view-content.word-reg-mode .line-pinyin { opacity: 0.2; }
 /* 通常時のテキスト選択を許可 */
 .line-chinese { -webkit-touch-callout: none; }
-/* 単語登録モード中のみ選択を無効化 */
-#view-content.word-reg-mode .line-chinese {
-  -webkit-user-select: none; user-select: none; cursor: pointer;
-}
 /* 設定ボタン（左側縦書き） */
 #settings-side-btn {
   position: fixed; left: 0; top: 80px;
@@ -183,10 +177,6 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   cursor: pointer; z-index: 20; border: none; font-family: inherit;
   line-height: 1.3; display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
-/* 単語登録モード中のピンイングレーアウト */
-#view-content.word-reg-mode .line-pinyin { opacity: 0.2; }
-#view-content.word-reg-mode .line-chinese { -webkit-touch-callout: none; }
-
 /* しおりマーク */
 .bookmark-line {
   display: flex; align-items: center; gap: 8px;
@@ -299,100 +289,6 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 .scroll-btn.visible { opacity: 1; pointer-events: auto; }
 
-/* ===== マーカー ===== */
-.marked-text {
-  background: rgba(255, 220, 0, 0.45);
-  border-radius: 2px;
-}
-/* 単語登録モード中のみ選択を無効化 */
-#view-content.word-reg-mode .line-chinese {
-  -webkit-user-select: none; user-select: none;
-  -webkit-touch-callout: none;
-}
-#bottom-tabs { pointer-events: auto; }
-#bottom-tabs * { pointer-events: auto; }
-/* マーカーFAB */
-#marker-fab {
-  position: fixed; bottom: 76px; right: 20px; z-index: 40;
-  width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
-  background: #f5d000; color: #333;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-  display: none; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; font-family: inherit;
-  flex-direction: column; gap: 1px;
-}
-#marker-fab.show { display: flex; }
-/* 単語帳チェックボックス */
-.vocab-checkbox { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; accent-color: #e8820a; }
-/* マーカーモード中のピンイン */
-#view-content.marker-mode .line-pinyin { opacity: 0.2; }
-/* 選択ポップアップ */
-#marker-popup {
-  position: fixed; z-index: 200;
-  display: none; flex-direction: column; gap: 0;
-  border-radius: 10px; overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-}
-#marker-popup.show { display: flex; }
-.marker-popup-btn {
-  border: none; cursor: pointer; padding: 11px 22px;
-  font-size: 14px; font-weight: 700; font-family: inherit;
-  white-space: nowrap;
-}
-
-/* ===== 下部タブ ===== */
-#bottom-tabs {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-  display: flex; border-top-width: 1px; border-top-style: solid;
-  height: 72px;
-}
-.tab-btn {
-  flex: 1; border: none; cursor: pointer; font-family: inherit;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; font-size: 10px; font-weight: 600; background: none;
-  transition: opacity 0.15s;
-}
-.tab-btn .material-icons { font-size: 22px; }
-
-/* ===== 単語帳 ===== */
-.vocab-grid {
-  display: grid; grid-template-columns: 1fr;
-  gap: 12px; padding: 16px;
-}
-@media (min-width: 768px)  { .vocab-grid { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 1200px) { .vocab-grid { grid-template-columns: 1fr 1fr 1fr; } }
-
-.vocab-date-header {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  opacity: 0.45; padding: 8px 16px 0;
-  grid-column: 1 / -1;
-}
-.vocab-card {
-  border-radius: 12px; padding: 14px 16px;
-  display: flex; align-items: flex-start; gap: 10px;
-  position: relative; overflow: hidden; user-select: none;
-}
-.vocab-card-inner { flex: 1; min-width: 0; }
-.vocab-chinese { font-weight: 700; line-height: 1.4; }
-.vocab-pinyin  { letter-spacing: 0.06em; margin-top: 3px; }
-.vocab-source  { font-size: 10px; opacity: 0.45; margin-top: 5px; }
-.vocab-jump-btn {
-  background: none; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  padding: 4px; border-radius: 6px; flex-shrink: 0; opacity: 0.5;
-}
-.vocab-jump-btn:hover { opacity: 1; }
-.vocab-swipe-del {
-  position: absolute; right: 0; top: 0; bottom: 0;
-  display: flex; align-items: center;
-  transform: translateX(100%);
-}
-.vocab-del-btn {
-  border: none; cursor: pointer; height: 100%; padding: 0 20px;
-  color: #fff; font-size: 13px; font-weight: 700; font-family: inherit;
-  background: #e05555;
-}
-
 /* 編集テキストエリア */
 #edit-textarea {
   width: 100%; border-radius: 10px; padding: 14px; resize: none; outline: none;
@@ -417,17 +313,11 @@ const COLORS = [
     bg:"#1c1c24", header:"#14141a", ch:"#f5f0e6", py:"#88c0a0",
     ui:"#a8a8b8", bd:"#2e2e3a", input:"#252530", accent:"#88c0a0",
     childBg:"#18181f", childBd:"#3a3a50",
-    // 単語帳カラー（インディゴ系）
-    vocabBg:"#1a1a2e", vocabHeader:"#12121e",
-    vocabAccent:"#7a8fd4", vocabUi:"#9098c8", vocabCh:"#e8ecff",
   },
   { id:"paper", label:"昼",
     bg:"#f5f0e8", header:"#ede5d8", ch:"#3a2d1e", py:"#7a6a4a",
     ui:"#5a4a3a", bd:"#ddd0bc", input:"#fdfaf5", accent:"#7a6a4a",
     childBg:"#e8dfd0", childBd:"#c8b89a",
-    // 単語帳カラー（ボルドー系）
-    vocabBg:"#f2ebe8", vocabHeader:"#e8dcd8",
-    vocabAccent:"#7a3a3a", vocabUi:"#6a2e2e", vocabCh:"#3a1818",
   },
 ];
 const SIZES = [
@@ -522,16 +412,12 @@ function getPy(text) {
 
 
 let state = {
-  page: "connect",   // "connect" | "list" | "view" | "edit" | "vocab"
+  page: "connect",   // "connect" | "list" | "view" | "edit"
   items: [],
   currentNoteId: null,
   colorIdx: 1, sizeIdx: 1,   // boot()で上書き
   showPinyin: true, showSettings: false, listEditMode: false,
   bookmarkMode: false, bookmarkPreview: null,
-  markerMode: false,
-  markerDraft: null,  // 編集中のマーカー一時コピー
-  wordRegMode: false, // 単語登録モード
-  vocabEditMode: false,
   editText: "", editTitleText: "",
   nextId: 1,
   swipeOpen: null, dragId: null,
@@ -557,7 +443,6 @@ function render() {
   else if (state.page==="list") renderList(app);
   else if (state.page==="view") renderView(app);
   else if (state.page==="edit") renderEdit(app);
-  else if (state.page==="vocab") renderVocab(app);
 }
 
 function mkHeader(leftHTML, titleAreaHTML, rightHTML) {
@@ -686,7 +571,6 @@ function renderList(app) {
     <div id="list-scroll" style="padding-bottom:96px;" onclick="closeSwipeOnBg(event)">
       ${itemsHTML}
     </div>
-    ${bottomTabsHTML(c)}
     <button class="fab" onclick="openNewModal()" style="background:${c.accent};">
       <span class="material-icons" style="font-size:26px;">add</span>
     </button>
@@ -909,8 +793,7 @@ function renderView(app) {
       linesHTML += `<div style="height:${s.ch * 0.8}px;"></div>`;
       continue;
     }
-    const markers = n.markers || [];
-    const chHtml = buildChineseHTML(idx, seg.chinese, markers);
+    const chHtml = esc(seg.chinese);
     if (state.showPinyin) {
       linesHTML += `<div class="line-chinese" data-seg-idx="${idx}"
         style="font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};"
@@ -941,10 +824,7 @@ function renderView(app) {
     : `<div class="header-main-title" style="color:${c.ch};">${esc(n.title)}</div>`;
 
   let rightBtns = "";
-  if (state.wordRegMode) {
-    rightBtns = `<button onclick="cancelWordRegMode()" class="cancel-btn"
-      style="color:${c.ui};border-color:${c.bd};background:${c.input};">保存せず戻る</button>`;
-  } else if (bm) {
+  if (bm) {
     rightBtns = `
       <button onclick="deleteBookmark()" class="cancel-btn"
         style="color:#e05555;border-color:#e05555;background:${c.input};font-size:11px;">しおりを削除して終了</button>
@@ -956,7 +836,6 @@ function renderView(app) {
       driveButtonsHTML(c, true) +
       hbtn("edit","編集","goEdit()",c.ui) +
       hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
-      hbtn("draw","単語登録","toggleWordRegMode()", c.ui) +
       hbtn("settings","設定","toggleSettings()",c.ui);
   }
 
@@ -974,14 +853,8 @@ function renderView(app) {
       titleArea, rightBtns
     )}
     <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
-    <div id="wr-banner" class="${state.wordRegMode?"visible":""}"
-      style="display:${state.wordRegMode?"block":"none"};position:sticky;top:52px;z-index:9;
-        padding:8px 16px;font-size:13px;font-weight:600;text-align:center;
-        background:#3a3000;color:#f5d000;border-bottom:1px solid rgba(245,208,0,0.3);">
-      単語帳に登録する言葉を選択して「登録」を押してください
-    </div>
     ${settingsPanel()}
-    <div id="view-content" class="${bm?"bm-mode":""} ${(!bm&&state.wordRegMode)?"word-reg-mode":""}" style="padding:20px 20px 30px;">
+    <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 30px;">
       ${!bm ? `<div style="text-align:center;padding:20px 0 32px;border-bottom:1px solid ${c.bd};margin-bottom:24px;">
         <div style="font-size:${s.ch*1.3}px;font-weight:700;color:${c.ch};line-height:1.4;letter-spacing:0.06em;">
           ${esc(n.title)}
@@ -999,7 +872,6 @@ function renderView(app) {
         style="width:100%;height:auto;display:block;"
         onerror="this.style.display='none'">
     </div>` : ""}
-      ${bottomTabsHTML(c)}
     ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
         style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
@@ -1037,8 +909,6 @@ function renderView(app) {
     };
     window.addEventListener("scroll", updateScrollBtns, { passive: true });
     updateScrollBtns();
-    // 長押しリスナーを初期化
-    initLongPressMarker();
   }
 }
 
@@ -1600,7 +1470,7 @@ async function driveSave() {
   try {
     const json=JSON.stringify({
       items:state.items.map(item=>{
-        if(item.kind==="note"){const{segments,...rest}=item;return rest;}
+        if(item.kind==="note"){const{segments,markers,...rest}=item;return rest;}
         if(item.kind==="folder"){const{open,...rest}=item;return rest;} // open状態は保存しない
         return item;
       }),
@@ -1655,7 +1525,7 @@ async function driveLoad() {
         if(item.doubleBreak===undefined) item.doubleBreak=false;
         item.segments=buildSegments(item.raw||"", [], item.doubleBreak);
         if(item.bookmarkIdx===undefined) item.bookmarkIdx=null;
-        if(!item.markers) item.markers=[];
+        delete item.markers;
       }
     });
     state.unsaved=false;
@@ -1695,670 +1565,6 @@ function driveButtonsHTML(c, saveOnly) {
       <span class="material-icons">cloud_upload</span>
       <span class="hbtn-label">保存${dot}</span>
     </button>`;
-}
-
-// ============================================================
-// マーカー機能
-// ============================================================
-
-// セグメントの中国語テキストをHTML化（マーカー部分をハイライト）
-function buildChineseHTML(segIdx, text, markers) {
-  const chars = [...text]; // Unicode文字単位で分割
-  const marked = new Array(chars.length).fill(false);
-  // このセグメントのマーカーをstart/endで適用
-  markers.forEach(m => {
-    if (m.segIdx === segIdx) {
-      // textベースでも位置を確認（startが0の古いデータへの互換性）
-      let s = m.start, e = m.end;
-      if (m.text && (s === 0 && e > 0)) {
-        // 古い形式：textから位置を探す
-        const pos = [...text].join("").indexOf(m.text);
-        if (pos >= 0) { s = pos; e = pos + [...m.text].length; }
-      }
-      for (let i = s; i < e && i < chars.length; i++) marked[i] = true;
-    }
-  });
-  let html = "";
-  let inMark = false;
-  chars.forEach((ch, i) => {
-    if (marked[i] && !inMark) { html += '<span class="marked-text">'; inMark = true; }
-    if (!marked[i] && inMark) { html += '</span>'; inMark = false; }
-    html += ch.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  });
-  if (inMark) html += '</span>';
-  return html;
-}
-
-function startMarkerMode() { /* 廃止 */ }
-
-function toggleWordRegMode() {
-  const sy = window.scrollY;
-  state.wordRegMode = !state.wordRegMode;
-  if (!state.wordRegMode && _expandedSegIdx !== null) collapseSegment();
-  render();
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-}
-function cancelWordRegMode() {
-  const sy = window.scrollY;
-  if (_expandedSegIdx !== null) collapseSegment();
-  state.wordRegMode = false;
-  render();
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-}
-
-// ============================================================
-// 長押しマーカー（セグメント単語展開）
-// ============================================================
-let _expandedSegIdx = null;  // 現在展開中のセグメント番号
-
-function initLongPressMarker() {
-  const vc = document.getElementById("view-content");
-  if (!vc) return;
-
-  let _longPressTimer = null;
-  let _longPressTarget = null;
-
-  // 長押しは使わない（タップで展開、通常のコピー・翻訳を妨げない）
-  vc.addEventListener("touchend", () => {
-    clearTimeout(_longPressTimer);
-  }, { passive: true });
-
-  // PC用：ダブルクリックで展開
-  vc.addEventListener("dblclick", e => {
-    if (!state.wordRegMode) return; // 単語登録モード外では無効
-    const seg = e.target.closest("[data-seg-idx]");
-    if (!seg) return;
-    e.preventDefault();
-    const idx = parseInt(seg.dataset.segIdx);
-    expandSegment(idx);
-  });
-
-  // 単語登録モード中：行タップで展開、行外タップで閉じる
-  vc.addEventListener("click", e => {
-    if (!state.wordRegMode) return;
-    if (_expandedSegIdx !== null) {
-      const expanded = document.getElementById("seg-expanded-" + _expandedSegIdx);
-      if (expanded && !expanded.contains(e.target)) collapseSegment();
-      return;
-    }
-    const seg = e.target.closest("[data-seg-idx]");
-    if (seg) expandSegment(parseInt(seg.dataset.segIdx));
-  });
-
-  // 通常モード：展開中なら行外クリックで閉じる
-  document.addEventListener("click", e => {
-    if (state.wordRegMode) return;
-    if (_expandedSegIdx === null) return;
-    const expanded = document.getElementById("seg-expanded-" + _expandedSegIdx);
-    if (expanded && !expanded.contains(e.target)) collapseSegment();
-  });
-}
-
-function expandSegment(segIdx) {
-  const n = note(); if (!n) return;
-  const seg = n.segments[segIdx]; if (!seg) return;
-  const c = col(); const s = sz();
-
-  // pinyin-proのsegment機能で単語分割
-  let words = [];
-  if (window.pinyinPro && window.pinyinPro.pinyin) {
-    // pinyin-proのsegment関数で単語分割（最も正確）
-    let segResult = null;
-    if (window.pinyinPro.segment) {
-      segResult = window.pinyinPro.segment(seg.chinese);
-    }
-    if (segResult && Array.isArray(segResult)) {
-      // segment結果: [{origin, type, pinyin}]
-      segResult.forEach(item => {
-        if (item.origin && item.origin.trim()) {
-          // pinyin-proのsegment結果はpinyinが文字列または配列
-          let py = "";
-          if (Array.isArray(item.pinyin)) {
-            py = item.pinyin.map(p => typeof p === "string" ? p : (p?.pinyin||"")).join(" ");
-          } else if (typeof item.pinyin === "string") {
-            py = item.pinyin;
-          } else {
-            // フォールバック：文字単位でpinyinを生成
-            py = window.pinyinPro.pinyin(item.origin, {toneType:"symbol",separator:" "});
-          }
-          words.push({ text: item.origin, pinyin: py });
-        }
-      });
-    }
-    if (words.length === 0) {
-      // フォールバック：pinyin配列と文字を1対1対応
-      const pyArr = window.pinyinPro.pinyin(seg.chinese, {
-        toneType:"symbol", type:"array"
-      });
-      const chars = [...seg.chinese];
-      chars.forEach((ch, i) => {
-        words.push({ text: ch, pinyin: pyArr[i] || "" });
-      });
-    }
-  }
-  if (words.length === 0) {
-    // フォールバック：1文字ずつ
-    words = [...seg.chinese].map(ch => ({
-      text: ch,
-      pinyin: window.pinyinPro?.pinyin(ch, {toneType:"symbol"}) || "",
-    }));
-  }
-
-  _expandedSegIdx = segIdx;
-
-  const el = document.getElementById("seg-" + segIdx);
-  if (!el) return;
-
-  const markers = n.markers || [];
-
-  // 選択中の単語インデックスセット
-  _selectedWordIdxs = new Set();
-
-  // 選択色（夜：緑系、昼：茶系）
-  const selBg    = c.id==="night" ? "rgba(100,180,130,0.5)" : "rgba(160,120,60,0.25)";
-  const selBd    = c.id==="night" ? "#64b482" : "#a07830";
-  const markedBg = "rgba(255,220,0,0.55)";
-  const markedBd = "#d4b800";
-  const normalBg = c.id==="night" ? c.input : c.header;
-
-  // ワードごとのセル（横並び・行間広め・マス目にならないよう）
-  const cellsHTML = words.map((w, wi) => {
-    const hasMarker = markers.some(m => m.segIdx===segIdx && m.text===w.text);
-    return `<span id="wc-${segIdx}-${wi}"
-      onclick="selectWord(${segIdx},${wi})"
-      data-has-marker="${hasMarker}"
-      style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;
-        padding:4px 8px;cursor:pointer;border-radius:8px;margin:6px 3px;
-        background:${hasMarker ? markedBg : normalBg};">
-      <span style="font-size:${s.ch}px;font-weight:700;color:${c.ch};">${esc(w.text)}</span>
-      <span style="font-size:${s.py}px;color:${c.py};white-space:nowrap;">${w.pinyin}</span>
-    </span>`;
-  }).join("");
-
-  // 登録ボタン（全幅）
-  const regBtn = `<button id="word-reg-btn-${segIdx}" onclick="registerSelectedWords(${segIdx})"
-    style="display:none;width:100%;background:#e8820a;border:none;border-radius:8px;
-      padding:10px;font-size:14px;font-weight:700;color:#fff;
-      cursor:pointer;font-family:inherit;margin-top:6px;">登録</button>`;
-
-  // セグメントをボタン群に差し替え
-  const wrapper = document.createElement("div");
-  wrapper.id = "seg-expanded-" + segIdx;
-  wrapper.dataset.segIdx = segIdx;
-  wrapper.style.cssText = `display:flex;flex-direction:column;padding:6px 0 8px;`;
-  // 単語セルのエリア
-  const row = document.createElement("div");
-  row.style.cssText = `display:flex;flex-wrap:wrap;align-items:flex-start;`;
-  row.innerHTML = cellsHTML;
-  wrapper.appendChild(row);
-  const regBtnEl = document.createElement("div");
-  regBtnEl.innerHTML = regBtn;
-  wrapper.appendChild(regBtnEl.firstChild);
-
-  el.replaceWith(wrapper);
-
-  // 単語リストをキャッシュ
-  _segWords = words;
-}
-
-let _segWords = [];
-let _selectedWordIdxs = new Set();
-
-function selectWord(segIdx, wordIdx) {
-  const n = note(); if (!n) return;
-  const w = _segWords[wordIdx]; if (!w) return;
-  const c = col();
-  const markedBg = "rgba(255,220,0,0.55)";
-  const selBg    = c.id==="night" ? "rgba(100,180,130,0.5)" : "rgba(160,120,60,0.25)";
-  const selBd    = c.id==="night" ? "#64b482" : "#a07830";
-  const normalBg = c.id==="night" ? c.input : c.header;
-
-  const hasMarker = (n.markers||[]).some(m => m.segIdx===segIdx && m.text===w.text);
-
-  if (hasMarker) {
-    // マーカー済みなら即削除
-    n.markers = n.markers.filter(m => !(m.segIdx===segIdx && m.text===w.text));
-    markUnsaved();
-    showToast("マーカーを削除しました");
-    const cell = document.getElementById(`wc-${segIdx}-${wordIdx}`);
-    if (cell) { cell.style.background = normalBg; cell.dataset.hasMarker = "false"; }
-    return;
-  }
-
-  // 選択トグル
-  if (_selectedWordIdxs.has(wordIdx)) {
-    _selectedWordIdxs.delete(wordIdx);
-  } else {
-    _selectedWordIdxs.add(wordIdx);
-  }
-  const isSelected = _selectedWordIdxs.has(wordIdx);
-  const cell = document.getElementById(`wc-${segIdx}-${wordIdx}`);
-  if (cell) cell.style.background = isSelected ? selBg : normalBg;
-
-  // 登録ボタンの表示/非表示
-  const regBtn = document.getElementById(`word-reg-btn-${segIdx}`);
-  if (regBtn) regBtn.style.display = _selectedWordIdxs.size > 0 ? "inline-block" : "none";
-}
-
-function registerSelectedWords(segIdx) {
-  const n = note(); if (!n) return;
-  if (!n.markers) n.markers = [];
-  if (_selectedWordIdxs.size === 0) return;
-
-  // 選択インデックスを昇順にソートして連続テキストを結合
-  const sorted = [..._selectedWordIdxs].sort((a,b) => a-b);
-  const text   = sorted.map(i => _segWords[i]?.text || "").join("");
-  const pinyin = sorted.map(i => _segWords[i]?.pinyin || "").join(" ");
-
-  if (!text) return;
-
-  // 重複チェック
-  const dup = n.markers.some(m => m.segIdx===segIdx && m.text===text);
-  if (!dup) {
-    const folder = folderOf(n);
-    // セグメント内での正しい文字位置を計算
-    const segText = n.segments[segIdx]?.chinese || "";
-    const charStart = [...segText].indexOf([..._segWords[sorted[0]]?.text||""][0]);
-    // sorted内の単語をつなげた文字列の開始位置
-    let charPos = 0;
-    for (let i = 0; i < sorted[0]; i++) {
-      charPos += [...(_segWords[i]?.text||"")].length;
-    }
-    n.markers.push({
-      id: Date.now(),
-      segIdx, start: charPos, end: charPos + [...text].length,
-      text, pinyin,
-      noteId: n.id, noteTitle: n.title,
-      folderTitle: folder ? folder.title : "",
-      createdAt: new Date().toISOString(),
-    });
-    markUnsaved();
-    showToast(`「${text}」を登録しました`);
-  } else {
-    showToast("すでに登録されています");
-  }
-
-  // 展開を閉じてセグメントを元に戻す
-  collapseSegment();
-  // 単語登録モードを解除
-  if (state.wordRegMode) {
-    const sy = window.scrollY;
-    state.wordRegMode = false;
-    render();
-    requestAnimationFrame(() => window.scrollTo(0, sy));
-  }
-}
-
-function collapseSegment() {
-  if (_expandedSegIdx === null) return;
-  const segIdx = _expandedSegIdx;
-  const n = note(); if (!n) return;
-  const seg = n.segments[segIdx]; if (!seg) return;
-  const c = col(); const s = sz();
-  const markers = n.markers || [];
-
-  const expanded = document.getElementById("seg-expanded-" + segIdx);
-  if (!expanded) { _expandedSegIdx = null; return; }
-
-  // 元のセグメント表示に戻す
-  const chHtml = buildChineseHTML(segIdx, seg.chinese, markers);
-  const div = document.createElement("div");
-  div.className = "line-chinese";
-  div.dataset.segIdx = segIdx;
-  div.id = "seg-" + segIdx;
-  div.style.cssText = `font-size:${s.ch}px;color:${c.ch};line-height:${s.lhCh};`;
-  div.innerHTML = chHtml;
-  expanded.replaceWith(div);
-  _expandedSegIdx = null;
-}
-
-
-
-function saveMarkerMode() {
-  // 保存して終了（マーカーはすでにnote().markersに反映済み）
-  const sy = window.scrollY;
-  state.markerMode = false;
-  state.markerDraft = null;
-  removeSelectionListener();
-  hideMarkerPopup();
-  markUnsaved();
-  render();
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-  showToast("マーカーを保存しました");
-}
-
-function cancelMarkerMode() {
-  // 保存せず終了（一時コピーに戻す）
-  const sy = window.scrollY;
-  const n = note();
-  if (n && state.markerDraft !== null) {
-    n.markers = state.markerDraft; // 元に戻す
-  }
-  state.markerMode = false;
-  state.markerDraft = null;
-  removeSelectionListener();
-  hideMarkerPopup();
-  render();
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-}
-
-function endMarkerMode() { saveMarkerMode(); } // 後方互換
-
-function clearAllMarkers() {
-  const n = note(); if (!n) return;
-  if (!confirm("このノートのマーカーをすべて削除しますか？")) return;
-  n.markers = [];
-  markUnsaved();
-  const sy = window.scrollY;
-  render();
-  setTimeout(() => initSelectionListener(), 100);
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-}
-
-// 選択リスナー
-let _selectionHandler = null;
-function initSelectionListener() {
-  removeSelectionListener();
-  _selectionHandler = () => handleTextSelection();
-  document.addEventListener("selectionchange", _selectionHandler);
-}
-function removeSelectionListener() {
-  if (_selectionHandler) {
-    document.removeEventListener("selectionchange", _selectionHandler);
-    _selectionHandler = null;
-  }
-}
-
-function hideMarkerPopup() {
-  const popup = document.getElementById("marker-popup");
-  if (popup) popup.classList.remove("show");
-  window.getSelection()?.removeAllRanges();
-}
-
-function handleTextSelection() {
-  // FABボタンを使うのでポップアップは不要、何もしない
-}
-
-function showMarkerPopup() { /* FABに統合 */ }
-
-function addMarker(selText, segIdx) {
-  const n = note(); if (!n) return;
-  if (!n.markers) n.markers = [];
-  const seg = n.segments[segIdx];
-  if (!seg) { hideMarkerPopup(); return; }
-  const segText = seg.chinese;
-  const start = segText.indexOf(selText);
-  if (start < 0) { hideMarkerPopup(); return; }
-  const end = start + [...selText].length;
-  // 重複チェック：同じsegIdx・start・endがあれば追加しない
-  const dup = n.markers.some(m => m.segIdx===segIdx && m.start===start && m.end===end);
-  if (dup) { showToast("すでにマーカーがあります"); hideMarkerPopup(); return; }
-  const pinyin = getPy(selText);
-  const folder = folderOf(n);
-  n.markers.push({
-    id: Date.now(),
-    segIdx, start, end,
-    text: selText, pinyin,
-    noteId: n.id, noteTitle: n.title,
-    folderTitle: folder ? folder.title : "",
-    createdAt: new Date().toISOString(),
-  });
-  hideMarkerPopup();
-  showToast("マーカーを追加しました");
-  const sy = window.scrollY;
-  render();
-  setTimeout(() => initSelectionListener(), 100);
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-}
-
-// FABボタンから呼ばれる（現在の選択テキストにマーカーを付ける）
-function applyMarkerFromSelection() {
-  const sel = window.getSelection();
-  if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-    showToast("テキストを選択してからタップしてください"); return;
-  }
-  const selText = sel.toString().trim();
-  const vc = document.getElementById("view-content");
-  if (!vc || !vc.contains(sel.anchorNode)) { showToast("本文のテキストを選択してください"); return; }
-  const segEl = sel.anchorNode.parentElement?.closest("[data-seg-idx]");
-  const segIdx = segEl ? parseInt(segEl.dataset.segIdx) : 0;
-  const n = note(); if (!n) return;
-  // マーカー重複確認
-  const segText = n.segments[segIdx]?.chinese || "";
-  const start = segText.indexOf(selText);
-  const end = start + [...selText].length;
-  const overlaps = n.markers && n.markers.some(m => {
-    if (m.segIdx !== segIdx) return false;
-    return !(end <= m.start || start >= m.end);
-  });
-  if (overlaps) {
-    removeMarkerByText(selText, segIdx);
-  } else {
-    addMarker(selText, segIdx);
-  }
-}
-
-function removeMarkerByText(selText, segIdx) {
-  const n = note(); if (!n || !n.markers) return;
-  // 選択テキストと重複するマーカーをすべて削除
-  n.markers = n.markers.filter(m => {
-    if (m.segIdx !== segIdx) return true;
-    const segText = n.segments[m.segIdx]?.chinese || "";
-    const mStart = segText.indexOf(m.text);
-    const sStart = segText.indexOf(selText);
-    if (mStart < 0 || sStart < 0) return true;
-    // 重複チェック
-    return (sStart + [...selText].length <= mStart || sStart >= mStart + [...m.text].length);
-  });
-  markUnsaved();
-  hideMarkerPopup();
-  const sy = window.scrollY;
-  render();
-  setTimeout(() => initSelectionListener(), 100);
-  requestAnimationFrame(() => window.scrollTo(0, sy));
-}
-
-// ============================================================
-// 単語帳
-// ============================================================
-
-function getAllMarkers() {
-  // 全ノートのマーカーを日付降順で返す
-  const all = [];
-  state.items.forEach(item => {
-    if (item.kind !== "note" || !item.markers) return;
-    const folder = folderOf(item);
-    item.markers.forEach(m => {
-      all.push({
-        ...m,
-        pinyin: (m.pinyin||"").trim() || getPy(m.text), // 保存時に空なら再生成
-        noteId: item.id,
-        noteTitle: item.title,
-        folderTitle: folder ? folder.title : "",
-      });
-    });
-  });
-  all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  return all;
-}
-
-function renderVocab(app) {
-  const c = col(); const s = sz();
-  const vcol = {
-    ...c,
-    bg:     c.vocabBg     || c.bg,
-    header: c.vocabHeader || c.header,
-    accent: c.vocabAccent || c.accent,
-    ui:     c.vocabUi     || c.ui,
-    ch:     c.vocabCh     || c.ch,
-    input:  c.vocabHeader || c.input,
-  };
-  const em = state.vocabEditMode;
-  const markers = getAllMarkers();
-  const today = new Date().toISOString().slice(0,10);
-  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
-  function dateLabel(d) {
-    if (d===today) return "今日"; if (d===yesterday) return "昨日";
-    return d.replace(/-/g,"/");
-  }
-
-  // 日付ごとにグループ化
-  const groups = {};
-  markers.forEach(m => {
-    const d = m.createdAt ? m.createdAt.slice(0,10) : "不明";
-    if (!groups[d]) groups[d] = [];
-    groups[d].push(m);
-  });
-
-  let gridHTML = "";
-  Object.keys(groups).forEach(date => {
-    gridHTML += `<div class="vocab-date-header" style="color:${c.ui};">${dateLabel(date)}</div>`;
-    groups[date].forEach(m => {
-      const source = [m.folderTitle, m.noteTitle].filter(Boolean).join(" › ");
-      gridHTML += `
-        <div class="vocab-card" style="background:${vcol.input};border:1px solid ${c.bd};">
-          ${em ? `<input type="checkbox" class="vocab-checkbox" id="chk-${m.id}"
-            onchange="toggleVocabCheck(${m.id},this.checked)">` : ""}
-          <div class="vocab-card-inner">
-            <div class="vocab-chinese" style="font-size:${s.ch}px;color:${vcol.ch};">${esc(m.text)}</div>
-            ${state.showPinyin ? `<div class="vocab-pinyin" style="font-size:${s.py}px;color:${c.py};margin-top:4px;">${(m.pinyin||"").trim()||getPy(m.text)}</div>` : ""}
-            <div class="vocab-source" style="color:${vcol.ui};">${esc(source)}</div>
-          </div>
-          ${!em ? `<button class="vocab-jump-btn" onclick="jumpToNote(${m.noteId},${m.segIdx})"
-            style="color:${vcol.accent};align-self:stretch;padding:0 14px;
-              border-left:1px solid ${c.bd};border-radius:0 12px 12px 0;
-              margin:-14px -16px -14px 0;
-              background:${c.id==='night'?'rgba(106,127,212,0.12)':'rgba(122,58,58,0.08)'};" title="本文へジャンプ">
-            <span class="material-icons" style="font-size:20px;">open_in_new</span>
-          </button>` : ""}
-        </div>`;
-    });
-  });
-
-  if (!gridHTML) {
-    gridHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;opacity:0.4;font-size:14px;">
-      マーカーした単語・フレーズがここに並びます</div>`;
-  }
-
-  const rightBtns = em
-    ? `<button onclick="deleteCheckedVocab()" style="background:#e05555;border:none;border-radius:8px;
-        padding:6px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">削除</button>
-       <button onclick="cancelVocabEdit()" style="background:none;border:1px solid ${vcol.bd};border-radius:8px;
-        padding:6px 12px;font-size:13px;color:${vcol.ui};cursor:pointer;font-family:inherit;">完了</button>`
-    : hbtn("edit","編集","startVocabEdit()",vcol.ui) + hbtn("settings","設定","toggleSettings()",vcol.ui);
-
-  // ヘッダー・フッターにvocabカラーを適用
-  document.body.style.background = vcol.bg;
-  app.innerHTML = `
-    <div class="header" style="background:${vcol.header};border-color:${c.bd};">
-      <div style="flex-shrink:0;"></div>
-      <div class="header-title-area">
-        <div class="header-main-title" style="color:${vcol.accent};">単語帳</div>
-      </div>
-      <div class="header-btns">${driveButtonsHTML(vcol)}${rightBtns}</div>
-    </div>
-    ${!em ? `<div style="padding:8px 16px;font-size:12px;opacity:0.45;border-bottom:1px solid ${c.bd};background:${vcol.header};">
-      <span class="material-icons" style="font-size:14px;vertical-align:middle;">open_in_new</span>
-      右端タップで本文へジャンプ
-    </div>` : ""}
-    ${settingsPanel()}
-    <div class="vocab-grid">${gridHTML}</div>
-    ${bottomTabsHTML(c, vcol)}`;
-}
-
-let _vocabChecked = new Set();
-function startVocabEdit() { _vocabChecked = new Set(); state.vocabEditMode=true; render(); }
-function cancelVocabEdit() { state.vocabEditMode=false; render(); }
-function toggleVocabCheck(id, checked) {
-  if (checked) _vocabChecked.add(id); else _vocabChecked.delete(id);
-}
-function deleteCheckedVocab() {
-  if (_vocabChecked.size===0) { showToast("削除する項目を選択してください"); return; }
-  if (!confirm(`${_vocabChecked.size}件のマーカーを削除しますか？`)) return;
-  _vocabChecked.forEach(id => deleteMarkerById(id));
-  _vocabChecked = new Set();
-  state.vocabEditMode = false;
-  markUnsaved();
-  render();
-}
-
-function jumpToNote(noteId, segIdx) {
-  state.currentNoteId = noteId;
-  state.page = "view";
-  state.markerMode = false;
-  state._jumpToSegIdx = (segIdx !== undefined) ? segIdx : null;
-  render();
-  // renderView後にセグメント位置へスクロール
-  if (segIdx !== undefined) {
-    requestAnimationFrame(() => {
-      const el = document.getElementById("seg-" + segIdx);
-      if (el) {
-        const top = el.getBoundingClientRect().top + window.scrollY - 80;
-        window.scrollTo({ top, behavior: "smooth" });
-      }
-    });
-  }
-}
-
-function deleteMarkerById(markerId) {
-  state.items.forEach(item => {
-    if (item.kind === "note" && item.markers) {
-      item.markers = item.markers.filter(m => m.id !== markerId);
-    }
-  });
-  markUnsaved();
-  render();
-}
-
-function initVocabSwipe() { /* スワイプ削除廃止 */ }
-
-// ============================================================
-// 下部タブ
-// ============================================================
-function bottomTabsHTML(c, vc) {
-  const isVocab = state.page === "vocab";
-  const vocabC  = vc || { ...c, header: c.vocabHeader||c.header, accent: c.vocabAccent||c.accent };
-  const tabBg   = isVocab ? vocabC.header : c.header;
-  const noteCol  = isVocab ? (c.ui+"66") : c.accent;
-  const vocabCol = isVocab ? vocabC.accent : ((c.vocabAccent||c.accent)+"66");
-  // 左(ノート)と右(単語帳)で常に色分け
-  const noteTabBg   = c.header;
-  const vocabTabBg  = vocabC.header;
-  const noteTabCol  = isVocab ? (c.accent+"88") : c.accent;
-  const vocabTabCol2 = isVocab ? vocabC.accent : (vocabC.accent+"88");
-  return `<div id="bottom-tabs" style="background:transparent;border-color:${c.bd};">
-    <button class="tab-btn" onclick="goNoteTab()"
-      style="color:${noteTabCol};background:${noteTabBg};font-weight:${isVocab?"400":"700"};">
-      <span class="material-icons">menu_book</span>
-      <span>ノート</span>
-    </button>
-    <div class="tab-divider" style="background:${c.bd};"></div>
-    <button class="tab-btn" onclick="goVocabTab()"
-      style="color:${vocabTabCol2};background:${vocabTabBg};font-weight:${isVocab?"700":"400"};">
-      <span class="material-icons">bookmarks</span>
-      <span>単語帳</span>
-    </button>
-  </div>`;
-}
-
-function goNoteTab() {
-  if (state.page === "list" || state.page === "view" || state.page === "edit") return;
-  // 単語帳からノートに戻るとき、前回のページ・位置を復元
-  const prevPage = state._noteLastPage || "list";
-  const prevNoteId = state._noteLastNoteId || null;
-  const prevScrollY = state._noteLastScrollY || 0;
-  state.page = prevPage;
-  state.currentNoteId = prevNoteId;
-  render();
-  requestAnimationFrame(() => window.scrollTo(0, prevScrollY));
-}
-function goVocabTab() {
-  if (state.page === "vocab") return;
-  // ノートの現在位置を保存
-  state._noteLastPage = state.page;
-  state._noteLastNoteId = state.currentNoteId;
-  state._noteLastScrollY = window.scrollY;
-  state.page = "vocab"; render();
 }
 
 // ============================================================
