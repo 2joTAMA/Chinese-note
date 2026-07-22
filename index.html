@@ -518,12 +518,22 @@ function settingsPanel() {
           </div>
         </div>`;
     })() : ""}
-    ${_accessToken ? `<div class="sp-label" style="margin-top:6px;">クラウド同期</div>
-      <button onclick="driveSave()" style="width:100%;border-radius:10px;padding:9px;
-        font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
-        background:${c.input};color:${c.ui};display:flex;align-items:center;justify-content:center;gap:6px;">
-        <span class="material-icons" style="font-size:16px;">sync</span>今すぐ同期
-      </button>` : ""}
+    ${_accessToken ? `<div class="sp-label" style="margin-top:6px;">クラウド</div>
+      <div style="font-size:11px;opacity:0.55;color:${c.ui};margin:-2px 0 6px;line-height:1.5;">
+        アップロード＝この端末→クラウド／ダウンロード＝クラウド→この端末
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="driveSave()" style="flex:1;border-radius:10px;padding:9px;
+          font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
+          background:${c.input};color:${c.ui};display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">cloud_upload</span>アップロード
+        </button>
+        <button onclick="driveLoad()" style="flex:1;border-radius:10px;padding:9px;
+          font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
+          background:${c.input};color:${c.ui};display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">cloud_download</span>ダウンロード
+        </button>
+      </div>` : ""}
   </div>`;
 }
 
@@ -1621,9 +1631,26 @@ async function driveSave(opts) {
     _lastCloudSaveAt = Date.now();
     state.unsaved = false;
     persistLocal(items, state.nextId, savedAt); // ローカルの基準時刻もクラウドと揃える
-    if(!silent) showToast("Google Driveに同期しました");
+    if(!silent) showToast("この端末の内容をクラウドにアップロードしました");
     render();
-  } catch(e){ if(!silent) showToast("同期エラー: "+e.message); }
+  } catch(e){ if(!silent) showToast("アップロードエラー: "+e.message); }
+}
+// クラウドの内容をこの端末に取り込む（ローカルを上書きする）。
+// 未アップロードの変更がある場合は確認してから実行する
+async function driveLoad() {
+  if(!_accessToken){ showToast("先にGoogleアカウントに接続してください"); return; }
+  if (state.unsaved) {
+    const ok = confirm("この端末のまだアップロードしていない変更が失われます。\nクラウドの内容で上書きしますか？");
+    if (!ok) return;
+  }
+  showToast("クラウドから読み込み中...");
+  try {
+    const data = await fetchCloudData();
+    if (!data) { showToast("クラウドにはまだデータがありません"); return; }
+    applyCloudData(data);
+    showToast("クラウドの内容をこの端末に読み込みました");
+    render();
+  } catch(e) { showToast("ダウンロードエラー: "+e.message); }
 }
 // 接続直後の同期ロジック。
 // ・ローカルキャッシュが無い状態（connect画面）からの接続 → 確認なしでクラウドを採用
@@ -1646,8 +1673,8 @@ async function syncOnConnect() {
       const cloudSavedAt = data.savedAt ? new Date(data.savedAt).getTime() : 0;
       const localSavedAt = state._localSavedAt ? new Date(state._localSavedAt).getTime() : 0;
       if (cloudSavedAt > localSavedAt) {
-        const ok = confirm("Google Driveの方に新しいデータがあります。読み込みますか？\n（この端末のまだ同期していない変更は上書きされます）");
-        if (ok) { applyCloudData(data); showToast("クラウドのデータを読み込みました"); }
+        const ok = confirm("クラウドの方に新しいデータがあります。ダウンロードしますか？\n（この端末のまだアップロードしていない変更は上書きされます）");
+        if (ok) { applyCloudData(data); showToast("クラウドの内容をこの端末に読み込みました"); }
         else { showToast("この端末のデータを維持します"); }
       } else {
         showToast("Google Driveに接続しました");
