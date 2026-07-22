@@ -257,19 +257,32 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   border-radius: 50%; color: #fff; font-size: 28px; border: none; cursor: pointer;
   box-shadow: 0 4px 16px rgba(0,0,0,0.28); display: flex; align-items: center; justify-content: center;
 }
+/* スマホでは下部固定バーが厚くなる分、FABをその上に逃がす */
+@media (max-width: 767px) {
+  .fab { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+}
 
-/* 一覧画面：しおり位置へジャンプ（固定バー） */
+/* 一覧画面：しおり位置へジャンプ。
+   スマホ：画面幅いっぱい・角丸なしでベタ塗り、ホームインジケーター分の余白も確保
+   タブレット/PC：浮かせたピル型ボタンのまま、下端との余白を広めに取る */
 #bm-jump-bar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 25;
-  padding: 10px 16px; display: flex; justify-content: center;
 }
 #bm-jump-bar-btn {
-  width: 100%; max-width: 560px; border: none; border-radius: 12px;
-  padding: 13px; font-size: 14px; font-weight: 700; font-family: inherit;
+  width: 100%; border: none; border-radius: 0;
+  padding: 22px 16px calc(22px + env(safe-area-inset-bottom, 0px));
+  font-size: 15px; font-weight: 700; font-family: inherit;
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+  box-shadow: 0 -2px 14px rgba(0,0,0,0.22);
 }
 #bm-jump-bar-btn:disabled { cursor: not-allowed; box-shadow: none; }
+@media (min-width: 768px) {
+  #bm-jump-bar { padding: 10px 16px 32px; display: flex; justify-content: center; }
+  #bm-jump-bar-btn {
+    max-width: 560px; border-radius: 12px; padding: 13px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+  }
+}
 .fab:active { transform: scale(0.93); }
 
 /* スクロールボタン */
@@ -585,7 +598,7 @@ function renderList(app) {
       rightBtns
     )}
     ${settingsPanel()}
-    <div id="list-scroll" style="padding-bottom:160px;" onclick="closeSwipeOnBg(event)">
+    <div id="list-scroll" style="padding-bottom:190px;" onclick="closeSwipeOnBg(event)">
       ${itemsHTML}
     </div>
     <button class="fab" onclick="openNewModal()" style="background:${c.accent};">
@@ -879,12 +892,12 @@ function renderView(app) {
     <div id="bm-banner" class="${bm?"visible":""}" style="background:${c.header};color:#e8820a;">しおりを挟む位置を選んでください</div>
     ${settingsPanel()}
     <div id="view-content" class="${bm?"bm-mode":""}" style="padding:20px 20px 30px;">
-      ${!bm ? `<div style="text-align:center;padding:20px 0 32px;border-bottom:1px solid ${c.bd};margin-bottom:24px;">
+      <div style="text-align:center;padding:20px 0 32px;border-bottom:1px solid ${c.bd};margin-bottom:24px;">
         <div style="font-size:${s.ch*1.3}px;font-weight:700;color:${c.ch};line-height:1.4;letter-spacing:0.06em;">
           ${esc(n.title)}
         </div>
         ${state.showPinyin ? `<div style="font-size:${s.py*1.1}px;color:${c.py};margin-top:6px;letter-spacing:0.08em;">${getPy(n.title)}</div>` : ""}
-      </div>` : ""}
+      </div>
       ${linesHTML}
       ${n.segments.length===0?`<div style="opacity:0.4;font-size:14px;text-align:center;padding:40px 0;">編集ボタンで文章を入力</div>`:""}
     </div>
