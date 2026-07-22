@@ -63,8 +63,8 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
 
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-@keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-@keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+/* sync/refreshアイコンの矢印の向きに合わせて反時計回りに回転 */
+@keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
 
 /* 設定パネル */
 #settings-panel {
@@ -257,23 +257,20 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   border-radius: 50%; color: #fff; font-size: 28px; border: none; cursor: pointer;
   box-shadow: 0 4px 16px rgba(0,0,0,0.28); display: flex; align-items: center; justify-content: center;
 }
-.fab:active { transform: scale(0.93); }
 
-/* スクロールボタン */
-.scroll-btns {
-  position: fixed; bottom: 88px; left: 16px; z-index: 30;
-  display: flex; flex-direction: column; gap: 16px;
+/* 一覧画面：しおり位置へジャンプ（固定バー） */
+#bm-jump-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 25;
+  padding: 10px 16px; display: flex; justify-content: center;
 }
-@media (min-width: 1024px) {
-  .scroll-btns { left: auto; right: 40px; }
+#bm-jump-bar-btn {
+  width: 100%; max-width: 560px; border: none; border-radius: 12px;
+  padding: 13px; font-size: 14px; font-weight: 700; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
 }
-.scroll-btn {
-  width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2); opacity: 0; pointer-events: none;
-  transition: opacity 0.25s;
-}
-.scroll-btn.visible { opacity: 1; pointer-events: auto; }
+#bm-jump-bar-btn:disabled { cursor: not-allowed; box-shadow: none; }
+.fab:active { transform: scale(0.93); }
 
 /* スクロールボタン */
 .scroll-btns {
@@ -580,18 +577,27 @@ function renderList(app) {
     hbtn(em?"check":"edit", em?"完了":"編集", "toggleListEdit()", c.ui) +
     settingsBtnHTML(c);
 
+  const hasAnyBookmark = state.items.some(i => i.kind==="note" && i.bookmarkIdx!=null);
+
   app.innerHTML = `
     ${mkHeader("",
       `<div class="header-main-title" style="color:${c.ch};">ノート一覧</div>`,
       rightBtns
     )}
     ${settingsPanel()}
-    <div id="list-scroll" style="padding-bottom:96px;" onclick="closeSwipeOnBg(event)">
+    <div id="list-scroll" style="padding-bottom:160px;" onclick="closeSwipeOnBg(event)">
       ${itemsHTML}
     </div>
     <button class="fab" onclick="openNewModal()" style="background:${c.accent};">
       <span class="material-icons" style="font-size:26px;">add</span>
     </button>
+    <div id="bm-jump-bar">
+      <button id="bm-jump-bar-btn" onclick="jumpToMostRecentBookmark()" ${hasAnyBookmark?"":"disabled"}
+        style="background:${hasAnyBookmark?c.accent:c.input};color:${hasAnyBookmark?c.bg:c.ui};
+          ${hasAnyBookmark?"":"opacity:0.45;"}">
+        <span class="material-icons" style="font-size:20px;">bookmark</span>しおり位置へジャンプ
+      </button>
+    </div>
 
     <!-- 新規ノートモーダル（タイトル＋本文＋フォルダ選択を一画面で） -->
     <div class="modal-overlay" id="newNoteModal" onclick="closeNewNoteModal()">
@@ -892,11 +898,11 @@ function renderView(app) {
     </div>` : ""}
     ${!bm ? `<div class="scroll-btns" id="scroll-btns">
       <button class="scroll-btn" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
-        style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
+        style="background:${c.accent}b3;color:${c.header};backdrop-filter:blur(4px);">
         <span class="material-icons" style="font-size:20px;">keyboard_arrow_up</span>
       </button>
       <button class="scroll-btn visible" id="scroll-bot-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})"
-        style="background:${c.header}e6;color:${c.ui};border:1px solid ${c.bd};backdrop-filter:blur(4px);">
+        style="background:${c.accent}b3;color:${c.header};backdrop-filter:blur(4px);">
         <span class="material-icons" style="font-size:20px;">keyboard_arrow_down</span>
       </button>
     </div>` : ""}`;
@@ -1144,9 +1150,27 @@ function toggleFolder(id) {
 }
 
 function openNote(id) {
+  const n = state.items.find(i=>i.id===id);
+  if (n) {
+    // 「しおり位置へジャンプ」ボタンが最近閲覧したノートを判定するための記録。
+    // 単に読んだだけではクラウド同期を発生させたくないので、markUnsaved()は使わずローカル保存のみ行う
+    n.lastOpenedAt = new Date().toISOString();
+    saveLocal();
+  }
   state.currentNoteId=id; state.page="view"; state.showSettings=false;
   state.bookmarkMode=false; state.bookmarkPreview=null;
   render();
+}
+function findMostRecentBookmarkedNote() {
+  const candidates = state.items.filter(i => i.kind==="note" && i.bookmarkIdx!=null);
+  if (candidates.length===0) return null;
+  candidates.sort((a,b) => new Date(b.lastOpenedAt||0) - new Date(a.lastOpenedAt||0));
+  return candidates[0];
+}
+function jumpToMostRecentBookmark() {
+  const n = findMostRecentBookmarkedNote();
+  if (!n) return;
+  openNote(n.id); // renderView側の既存処理でしおり位置まで自動スクロールされる
 }
 function goList() {
   state.page="list"; state.showSettings=false;
@@ -1447,12 +1471,14 @@ function reorderItems(dragId, targetId, insertAfter) {
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 function showToast(msg) {
+  const c = col();
   let t=document.getElementById("toast");
   if(!t){t=document.createElement("div");t.id="toast";document.body.appendChild(t);}
   t.textContent=msg;
   t.style.cssText=`position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
-    background:rgba(0,0,0,0.75);color:#fff;padding:8px 18px;border-radius:20px;
-    font-size:13px;z-index:200;white-space:nowrap;pointer-events:none;opacity:1;transition:opacity 0.4s;`;
+    background:${c.accent};color:${c.bg};padding:8px 18px;border-radius:20px;
+    font-size:13px;font-weight:700;z-index:200;white-space:nowrap;pointer-events:none;opacity:1;
+    box-shadow:0 4px 14px rgba(0,0,0,0.3);transition:opacity 0.4s;`;
   clearTimeout(t._timer);
   t._timer=setTimeout(()=>{t.style.opacity="0";},2500);
 }
