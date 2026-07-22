@@ -1065,9 +1065,18 @@ function renderEdit(app) {
 
   const ta = document.getElementById("edit-textarea");
   if (ta) {
-    ta.style.height = "auto";
-    ta.style.height = Math.max(ta.scrollHeight, window.innerHeight*0.55)+"px";
-    ta.addEventListener("input", ()=>{ ta.style.height="auto"; ta.style.height=ta.scrollHeight+"px"; });
+    const resizeTa = () => {
+      // heightを一旦autoに戻して再計測する際、ページやtextarea内のスクロール位置が
+      // ブラウザによって勝手に動いてしまうため、直前の位置を保存して復元する
+      const sy = window.scrollY;
+      const taScrollTop = ta.scrollTop;
+      ta.style.height = "auto";
+      ta.style.height = Math.max(ta.scrollHeight, window.innerHeight*0.55)+"px";
+      ta.scrollTop = taScrollTop;
+      window.scrollTo(0, sy);
+    };
+    resizeTa();
+    ta.addEventListener("input", resizeTa);
   }
 }
 
