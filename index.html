@@ -43,13 +43,18 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
 .header-breadcrumb { font-size: 11px; opacity: 0.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .header-btns { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
 .hbtn {
-  background: none; border: none; cursor: pointer;
+  background: none; border: none; cursor: pointer; position: relative;
   display: flex; align-items: center; gap: 4px;
   padding: 6px 8px; border-radius: 8px; font-family: inherit;
   font-size: 13px; font-weight: 600; white-space: nowrap;
 }
 .hbtn-label { display: none; }
 @media (min-width: 768px) { .hbtn-label { display: inline; } .hbtn { padding: 6px 10px; } }
+/* クラウド同期待ちインジケーター（設定ボタンに重ねて表示、ラベルの表示/非表示に関係なく常に見える） */
+.hbtn-dot {
+  position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%;
+  background: #e8820a; animation: pulse 1.5s infinite;
+}
 
 .cancel-btn {
   background: none; cursor: pointer; font-size: 12px; font-weight: 600;
@@ -57,12 +62,9 @@ body { min-height: 100vh; transition: background 0.3s, color 0.3s;
   font-family: inherit; white-space: nowrap; flex-shrink: 0;
 }
 
-/* 未保存バッジ */
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-.unsaved-dot { display:inline-block; width:7px; height:7px; border-radius:50%;
-  background:#e8820a; margin-left:3px; animation:pulse 1.5s infinite; vertical-align:middle; }
 
 /* 設定パネル */
 #settings-panel {
@@ -429,7 +431,7 @@ const sz       = () => SIZES[state.sizeIdx];
 const note     = () => state.items.find(i => i.id === state.currentNoteId);
 const folderOf = (n) => n && n.folderId ? state.items.find(i => i.id === n.folderId) : null;
 
-function markUnsaved() { state.unsaved = true; }
+function markUnsaved() { state.unsaved = true; saveLocal(); }
 
 // ============================================================
 // RENDER ROOT
@@ -457,6 +459,16 @@ function hbtn(icon, label, onclick, color) {
   return `<button class="hbtn" onclick="${onclick}" style="color:${color};">
     <span class="material-icons">${icon}</span>
     <span class="hbtn-label">${label}</span>
+  </button>`;
+}
+// 設定ボタン。Google Drive接続中に未同期の変更があれば、ラベルの表示/非表示に関係なく
+// 見えるドットを重ねて「同期待ち」を知らせる
+function settingsBtnHTML(c) {
+  const showDot = _accessToken && state.unsaved;
+  return `<button class="hbtn" onclick="toggleSettings()" style="color:${c.ui};">
+    <span class="material-icons">settings</span>
+    <span class="hbtn-label">設定</span>
+    ${showDot?'<span class="hbtn-dot"></span>':""}
   </button>`;
 }
 
@@ -496,6 +508,12 @@ function settingsPanel() {
           </div>
         </div>`;
     })() : ""}
+    ${_accessToken ? `<div class="sp-label" style="margin-top:6px;">クラウド同期</div>
+      <button onclick="driveSave()" style="width:100%;border-radius:10px;padding:9px;
+        font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
+        background:${c.input};color:${c.ui};display:flex;align-items:center;justify-content:center;gap:6px;">
+        <span class="material-icons" style="font-size:16px;">sync</span>今すぐ同期
+      </button>` : ""}
   </div>`;
 }
 
@@ -560,7 +578,7 @@ function renderList(app) {
   const driveHTML = em ? "" : driveButtonsHTML(c);
   const rightBtns = driveHTML +
     hbtn(em?"check":"edit", em?"完了":"編集", "toggleListEdit()", c.ui) +
-    hbtn("settings","設定","toggleSettings()",c.ui);
+    settingsBtnHTML(c);
 
   app.innerHTML = `
     ${mkHeader("",
@@ -833,10 +851,10 @@ function renderView(app) {
         padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">保存</button>`;
   } else {
     rightBtns =
-      driveButtonsHTML(c, true) +
+      driveButtonsHTML(c) +
       hbtn("edit","編集","goEdit()",c.ui) +
       hbtn("bookmark","しおり","startBookmarkMode()", n.bookmarkIdx!=null ? "#e8820a" : c.ui) +
-      hbtn("settings","設定","toggleSettings()",c.ui);
+      settingsBtnHTML(c);
   }
 
   // しおりジャンプボタン
@@ -1440,12 +1458,55 @@ function showToast(msg) {
 }
 
 // ============================================================
+// データ永続化（ローカル/クラウド共通のシリアライズ処理）
+// ============================================================
+const LOCAL_STORAGE_KEY = "chineseNoteLocalData";
+
+function serializeItems() {
+  return state.items.map(item=>{
+    if(item.kind==="note"){const{segments,markers,...rest}=item;return rest;}
+    if(item.kind==="folder"){const{open,...rest}=item;return rest;} // open状態は保存しない
+    return item;
+  });
+}
+// segments再構築・欠損フィールド補完など、読み込んだitemsに共通の後処理
+function normalizeLoadedItems() {
+  state.items.forEach(item=>{
+    if(item.kind==="note"){
+      if(item.doubleBreak===undefined) item.doubleBreak=false;
+      item.segments=buildSegments(item.raw||"", [], item.doubleBreak);
+      if(item.bookmarkIdx===undefined) item.bookmarkIdx=null;
+      delete item.markers;
+    }
+  });
+}
+function persistLocal(items, nextId, savedAt) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ items, nextId, savedAt }));
+    state._localSavedAt = savedAt;
+  } catch(e) { /* 容量超過などは無視。ローカル保存はbest effort */ }
+}
+// 変更のたびに即座に呼ばれる（markUnsaved経由）
+function saveLocal() {
+  persistLocal(serializeItems(), state.nextId, new Date().toISOString());
+}
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.items)) return null;
+    return data;
+  } catch(e) { return null; }
+}
+
+// ============================================================
 // GOOGLE DRIVE
 // ============================================================
 const CLIENT_ID = "408102016204-l1dfakfohg69q7qup2q967u6pmutc7bm.apps.googleusercontent.com";
 const SCOPES    = "https://www.googleapis.com/auth/drive.appdata";
 const FILE_NAME = "chinese-note-data.json";
-let _accessToken=null, _driveFileId=null;
+let _accessToken=null, _driveFileId=null, _lastCloudSaveAt=0;
 
 function driveSignIn() {
   const client=google.accounts.oauth2.initTokenClient({
@@ -1453,10 +1514,7 @@ function driveSignIn() {
     callback:async(resp)=>{
       if(resp.error){showToast("認証エラー: "+resp.error);return;}
       _accessToken=resp.access_token;
-      // 接続中画面を表示
-      renderLoading();
-      await driveLoad();
-      renderDriveStatus();
+      await syncOnConnect();
     },
   });
   client.requestAccessToken();
@@ -1464,7 +1522,7 @@ function driveSignIn() {
 function driveSignOut() {
   if(_accessToken)google.accounts.oauth2.revoke(_accessToken,()=>{});
   _accessToken=null; _driveFileId=null;
-  showToast("切断しました"); renderDriveStatus();
+  showToast("切断しました"); render();
 }
 async function findDriveFile() {
   // キャッシュは使わず毎回検索（確実に最新のファイルを取得）
@@ -1477,19 +1535,32 @@ async function findDriveFile() {
   _driveFileId = files[0]?.id || null;
   return _driveFileId;
 }
-async function driveSave() {
-  if(!_accessToken){showToast("先にGoogleアカウントに接続してください");return;}
-  showToast("保存中...");
+async function fetchCloudData() {
+  const fileId=await findDriveFile();
+  if(!fileId) return null;
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    {headers:{Authorization:"Bearer "+_accessToken}});
+  return await res.json();
+}
+// クラウドのデータをstateに適用し、ローカルキャッシュにも反映する
+function applyCloudData(data) {
+  state.items = data.items || [];
+  state.nextId = data.nextId ?? state.nextId;
+  normalizeLoadedItems();
+  updateFolderOpenState();
+  state.unsaved = false;
+  persistLocal(serializeItems(), state.nextId, data.savedAt || new Date().toISOString());
+}
+// 現在のstateをGoogle Driveへ保存する。
+// opts.silent=trueの場合はトーストを出さない（バックグラウンド遷移時の自動保存用）
+async function driveSave(opts) {
+  const silent = !!(opts && opts.silent);
+  if(!_accessToken){ if(!silent) showToast("先にGoogleアカウントに接続してください"); return; }
+  if(!silent) showToast("同期中...");
   try {
-    const json=JSON.stringify({
-      items:state.items.map(item=>{
-        if(item.kind==="note"){const{segments,markers,...rest}=item;return rest;}
-        if(item.kind==="folder"){const{open,...rest}=item;return rest;} // open状態は保存しない
-        return item;
-      }),
-      nextId:state.nextId,
-      savedAt:new Date().toISOString(),
-    });
+    const savedAt = new Date().toISOString();
+    const items = serializeItems();
+    const json = JSON.stringify({ items, nextId: state.nextId, savedAt });
     const fileId=await findDriveFile();
     const blob=new Blob([json],{type:"application/json"});
     if(fileId){
@@ -1508,76 +1579,55 @@ async function driveSave() {
       });
       const data=await res.json(); _driveFileId=data.id;
     }
-    state.unsaved=false;
-    showToast("Google Driveに保存しました");
+    _lastCloudSaveAt = Date.now();
+    state.unsaved = false;
+    persistLocal(items, state.nextId, savedAt); // ローカルの基準時刻もクラウドと揃える
+    if(!silent) showToast("Google Driveに同期しました");
     render();
-  } catch(e){ showToast("保存エラー: "+e.message); }
+  } catch(e){ if(!silent) showToast("同期エラー: "+e.message); }
 }
-async function driveLoad() {
-  if(!_accessToken){showToast("先にGoogleアカウントに接続してください");return;}
-  showToast("読み込み中...");
+// 接続直後の同期ロジック。
+// ・ローカルキャッシュが無い状態（connect画面）からの接続 → 確認なしでクラウドを採用
+// ・ローカルにすでにデータがある状態からの接続 → クラウドの方が新しい時だけ確認する
+async function syncOnConnect() {
+  const freshConnect = state.page==="connect";
+  if (freshConnect) renderLoading(); else showToast("同期を確認しています...");
   try {
-    const fileId=await findDriveFile();
-    if(!fileId){showToast("保存データが見つかりません");return;}
-    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-      {headers:{Authorization:"Bearer "+_accessToken}});
-    const data=await res.json();
-    if (!data.items || data.items.length === 0) {
-      state.page="list";
-      state.items=[];
-      state.unsaved=false;
-      render();
-      showToast("データがまだありません。新規ノートを作成してください");
-      return;
-    }
-    state.items=data.items;
-    // 設定はデバイスデフォルトを使う（クラウドから読まない）
-    state.nextId=data.nextId??state.nextId;
-    state.items.forEach(item=>{
-      if(item.kind==="note"){
-        if(item.doubleBreak===undefined) item.doubleBreak=false;
-        item.segments=buildSegments(item.raw||"", [], item.doubleBreak);
-        if(item.bookmarkIdx===undefined) item.bookmarkIdx=null;
-        delete item.markers;
+    const data = await fetchCloudData();
+    if (!data) {
+      if (state.items.length > 0) {
+        await driveSave(); // クラウドにまだ何もないので、ローカルの内容を初回バックアップとして保存
+      } else {
+        showToast("Google Driveに接続しました");
       }
-    });
-    state.unsaved=false;
-    state.page="list";
-    updateFolderOpenState();
-    const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
-    const kb = (bytes / 1024).toFixed(1);
-    showToast("読み込みました " + kb + " KB"); render();
-  } catch(e){ showToast("読み込みエラー: "+e.message); }
+    } else if (freshConnect) {
+      applyCloudData(data);
+      showToast("クラウドのデータを読み込みました");
+    } else {
+      const cloudSavedAt = data.savedAt ? new Date(data.savedAt).getTime() : 0;
+      const localSavedAt = state._localSavedAt ? new Date(state._localSavedAt).getTime() : 0;
+      if (cloudSavedAt > localSavedAt) {
+        const ok = confirm("Google Driveの方に新しいデータがあります。読み込みますか？\n（この端末のまだ同期していない変更は上書きされます）");
+        if (ok) { applyCloudData(data); showToast("クラウドのデータを読み込みました"); }
+        else { showToast("この端末のデータを維持します"); }
+      } else {
+        showToast("Google Driveに接続しました");
+      }
+    }
+  } catch(e) {
+    showToast("同期エラー: "+e.message);
+  }
+  if (state.page==="connect") state.page="list";
+  render();
 }
-function renderDriveStatus(){ if(state.page==="list")render(); }
 
-function driveButtonsHTML(c, saveOnly) {
-  const dot = state.unsaved ? `<span class="unsaved-dot"></span>` : "";
+function driveButtonsHTML(c) {
+  if (_accessToken) return ""; // 接続済みなら自動保存に任せ、ヘッダーには何も出さない
   const ac = (c && c.accent) ? c.accent : col().accent;
-  if(!_accessToken){
-    if (saveOnly) return ""; // ノートビューでは接続ボタン不要
-    return `<button onclick="driveSignIn()" class="hbtn" style="color:${ac};">
-      <span class="material-icons">cloud</span>
-      <span class="hbtn-label">接続</span>
-    </button>`;
-  }
-  if (saveOnly) {
-    // 保存ボタンのみ（ノートビュー用）
-    return state.unsaved ? `
-      <button onclick="driveSave()" class="hbtn" style="color:#e8820a;">
-        <span class="material-icons">cloud_upload</span>
-        <span class="hbtn-label">保存${dot}</span>
-      </button>` : "";
-  }
-  return `
-    <button onclick="driveLoad()" class="hbtn" style="color:${ac};">
-      <span class="material-icons">cloud_download</span>
-      <span class="hbtn-label">読込</span>
-    </button>
-    <button onclick="driveSave()" class="hbtn" style="color:${state.unsaved?'#e8820a':ac};">
-      <span class="material-icons">cloud_upload</span>
-      <span class="hbtn-label">保存${dot}</span>
-    </button>`;
+  return `<button onclick="driveSignIn()" class="hbtn" style="color:${ac};">
+    <span class="material-icons">cloud</span>
+    <span class="hbtn-label">接続</span>
+  </button>`;
 }
 
 // ============================================================
@@ -1588,9 +1638,35 @@ function boot() {
   state.sizeIdx   = def.sizeIdx;
   state.colorIdx  = def.colorIdx;
   state.showPinyin= def.showPinyin;
+
+  // 通信不要でまずローカルキャッシュから即座に復元する。
+  // キャッシュが無ければ従来通りconnect画面（state.pageの初期値）のままにする
+  const local = loadLocal();
+  if (local) {
+    state.items = local.items || [];
+    state.nextId = local.nextId ?? state.nextId;
+    normalizeLoadedItems();
+    state._localSavedAt = local.savedAt || null;
+    state.unsaved = false;
+    state.page = "list";
+  }
   // フォルダのデフォルト開閉をしおりで決定
   updateFolderOpenState();
   render();
+  initAutoSaveListeners();
+}
+
+// バックグラウンド遷移（画面ロック・スリープ含む）を検知し、
+// 未同期の変更があり、かつ前回のクラウド保存から一定時間経っていれば自動同期する
+function initAutoSaveListeners() {
+  const COOLDOWN_MS = 10*60*1000; // 10分
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "hidden") return;
+    if (!_accessToken) return;
+    if (!state.unsaved) return;
+    if (Date.now() - _lastCloudSaveAt < COOLDOWN_MS) return;
+    driveSave({silent:true});
+  });
 }
 
 function updateFolderOpenState() {
