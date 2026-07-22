@@ -1139,12 +1139,48 @@ function saveEdit() {
   const n=note(); if(!n)return;
   const newTitle=(ti?.value.trim())||n.title;
   if(!newTitle){ showToast("タイトルを入力してください"); return; }
+  const oldSegments=n.segments, oldBookmarkIdx=n.bookmarkIdx;
   n.title=newTitle;
   n.raw=ta.value;
   n.segments=buildSegments(ta.value,n.segments,n.doubleBreak);
-  n.bookmarkIdx=null;
+  n.bookmarkIdx=remapBookmarkIdx(oldSegments, oldBookmarkIdx, n.segments);
+  if((oldBookmarkIdx!==null&&oldBookmarkIdx!==undefined) && n.bookmarkIdx===null){
+    showToast("しおりの位置が見つからないため、しおりを解除しました");
+  }
   markUnsaved();
   state.page="view"; window.scrollTo(0,0); render();
+}
+
+// 編集後のしおり位置を再計算する。
+// しおりは「segments[idx]の直前」を指すギャップ番号（0〜segments.length）。
+// 直後・直前のセグメント本文が編集後も残っていれば、その位置に追従させる。
+// 見つからなければnull（呼び出し側でユーザーに通知する）。
+function remapBookmarkIdx(oldSegments, oldIdx, newSegments) {
+  if (oldIdx===null || oldIdx===undefined) return null;
+  if (!oldSegments || oldSegments.length===0 || !newSegments) return null;
+  const total = newSegments.length;
+  const expectedIdx = Math.round(oldIdx / oldSegments.length * total);
+  const findClosest = (text, expected) => {
+    let best=-1, bestDist=Infinity;
+    newSegments.forEach((s,i) => {
+      if (s.chinese===text) {
+        const d=Math.abs(i-expected);
+        if (d<bestDist) { bestDist=d; best=i; }
+      }
+    });
+    return best;
+  };
+  // しおり直後のセグメントが残っていれば、そのまま前に付ける
+  if (oldIdx < oldSegments.length) {
+    const idx = findClosest(oldSegments[oldIdx].chinese, expectedIdx);
+    if (idx >= 0) return idx;
+  }
+  // 直後が見つからなければ、直前のセグメントの後ろに付ける
+  if (oldIdx > 0) {
+    const idx = findClosest(oldSegments[oldIdx-1].chinese, expectedIdx-1);
+    if (idx >= 0) return idx+1;
+  }
+  return null;
 }
 
 function renameItem(id,val) {
