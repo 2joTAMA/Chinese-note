@@ -519,20 +519,22 @@ function settingsPanel() {
         </div>`;
     })() : ""}
     ${_accessToken ? `<div class="sp-label" style="margin-top:6px;">クラウド</div>
-      <div style="font-size:11px;opacity:0.55;color:${c.ui};margin:-2px 0 6px;line-height:1.5;">
-        アップロード＝この端末→クラウド／ダウンロード＝クラウド→この端末
-      </div>
       <div style="display:flex;gap:8px;">
-        <button onclick="driveSave()" style="flex:1;border-radius:10px;padding:9px;
-          font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
-          background:${c.input};color:${c.ui};display:flex;align-items:center;justify-content:center;gap:6px;">
-          <span class="material-icons" style="font-size:16px;">cloud_upload</span>アップロード
+        <button onclick="driveSave()" style="flex:1;border-radius:10px;padding:8px 4px;
+          font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
+          background:${c.input};color:${c.ui};display:flex;flex-direction:column;align-items:center;
+          justify-content:center;gap:2px;white-space:nowrap;">
+          <span class="material-icons" style="font-size:18px;">cloud_upload</span>アップロード
         </button>
-        <button onclick="driveLoad()" style="flex:1;border-radius:10px;padding:9px;
-          font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
-          background:${c.input};color:${c.ui};display:flex;align-items:center;justify-content:center;gap:6px;">
-          <span class="material-icons" style="font-size:16px;">cloud_download</span>ダウンロード
+        <button onclick="driveLoad()" style="flex:1;border-radius:10px;padding:8px 4px;
+          font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${c.bd};
+          background:${c.input};color:${c.ui};display:flex;flex-direction:column;align-items:center;
+          justify-content:center;gap:2px;white-space:nowrap;">
+          <span class="material-icons" style="font-size:18px;">cloud_download</span>ダウンロード
         </button>
+      </div>
+      <div style="font-size:11px;opacity:0.55;color:${c.ui};margin:6px 0 0;line-height:1.5;">
+        バックグラウンドに移った時や終了した時、変更があり前回のアップロードから10分以上経っていれば自動でアップロードされます。
       </div>` : ""}
   </div>`;
 }
